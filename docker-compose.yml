@@ -1,7 +1,7 @@
 version: "3.8"
 services:
   warp-proxy:
-    image: ghcr.io/chutiangekmm/warp-proxy:latest
+    image: ghcr.io/qiushi5/warp-proxy:latest
     container_name: warp-proxy
     restart: unless-stopped
     networks:
