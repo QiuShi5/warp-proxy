@@ -56,6 +56,13 @@ class PackagingTests(unittest.TestCase):
         self.assertIn("const active = Boolean(license.is_current);", dashboard)
         self.assertNotIn("license.is_current || license.status === 'active'", dashboard)
 
+    def test_dashboard_keeps_license_generation_out_of_node_management(self):
+        dashboard = read_text("backend/static/dashboard.html")
+
+        self.assertNotIn("nodeGenerateBtn", dashboard)
+        self.assertNotIn("generateAllBtn", dashboard)
+        self.assertIn("licensesGenerateBtn", dashboard)
+
     def test_compose_healthchecks_target_existing_api(self):
         for compose_file in (
             "docker-compose.yml",
