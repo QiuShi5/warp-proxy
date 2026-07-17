@@ -237,8 +237,20 @@
   .bar { height: 4px; margin: 11px 0; background: rgba(148, 163, 184, .22); border-radius: 999px; overflow: hidden; }
   .bar span { display: block; height: 100%; background: linear-gradient(90deg, var(--blue), var(--green)); border-radius: inherit; }
   .balance-list, .activity-list, .settings-form, .log-box { padding: 12px 15px 15px; }
-  .balance-row, .activity-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line-soft); }
+  .balance-row { display: grid; gap: 10px; padding: 12px 0; border-bottom: 1px solid var(--line-soft); }
+  .activity-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line-soft); }
   .balance-row:last-child, .activity-row:last-child { border-bottom: 0; }
+  .balance-node-head, .balance-method { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .balance-methods { display: grid; gap: 8px; }
+  .balance-method {
+    padding: 8px 10px;
+    border: 1px solid var(--line-soft);
+    border-radius: 7px;
+    background: rgba(7, 18, 31, .46);
+  }
+  .balance-method-left { min-width: 0; display: grid; gap: 3px; }
+  .balance-method-label { color: #dbeafe; font-size: 12px; font-weight: 850; text-transform: uppercase; }
+  .balance-method-meta { text-align: right; display: grid; justify-items: end; gap: 4px; }
   .activity-left { display: flex; align-items: center; gap: 10px; min-width: 0; }
   .activity-dot { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 8px; background: rgba(38, 132, 255, .16); color: #8bc8ff; font-weight: 900; }
   .activity-title { font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -557,6 +569,24 @@ function allTargets(data) {
   });
 }
 
+function groupedBalancerTargets(balancers) {
+  const groups = new Map();
+  for (const balancer of Object.values(balancers || {})) {
+    for (const target of (balancer?.targets || [])) {
+      const label = target.label || target.host || 'unknown';
+      if (!groups.has(label)) {
+        groups.set(label, { label, methods: [] });
+      }
+      groups.get(label).methods.push({
+        ...target,
+        balancer: balancer.name,
+        bind_port: balancer.bind_port,
+      });
+    }
+  }
+  return Array.from(groups.values());
+}
+
 function allLicenses(nodes) {
   return (nodes || []).flatMap(node => (node.licenses || []).map(license => ({ ...license, node_id: node.id })));
 }
@@ -689,25 +719,45 @@ function renderLicenses(node) {
 
 function renderBalancers(balancers) {
   const list = byId('balanceList');
-  const entries = Object.values(balancers || {});
-  const targets = entries.flatMap(balancer => (balancer.targets || []).map(target => ({ ...target, balancer: balancer.name, bind_port: balancer.bind_port })));
+  const groups = groupedBalancerTargets(balancers);
+  const targets = groups.flatMap(group => group.methods);
   const hasHealthyTarget = targets.some(target => target.healthy);
   byId('balancerState').className = `status ${hasHealthyTarget ? 'ok' : 'err'}`;
   byId('balancerState').textContent = hasHealthyTarget ? '已启用' : '无健康目标';
-  if (!targets.length) {
+  if (!groups.length) {
     list.innerHTML = '<div class="empty">没有负载均衡目标</div>';
     return;
   }
-  list.innerHTML = targets.map(target => `<div class="balance-row">
-    <div>
-      <strong>${escapeHtml(target.label)}</strong>
-      <div class="subtle">${escapeHtml(target.balancer)} / ${escapeHtml(target.host)}:${escapeHtml(target.port)}</div>
+  list.innerHTML = groups.map(group => {
+    const healthyCount = group.methods.filter(target => target.healthy).length;
+    const totalBytes = group.methods.reduce((sum, target) => sum + Number(target.total_bytes || 0), 0);
+    const totalConnections = group.methods.reduce((sum, target) => sum + Number(target.total_connections || 0), 0);
+    const nodeState = healthyCount === group.methods.length ? 'ok' : healthyCount ? 'warn' : 'err';
+    const nodeText = healthyCount === group.methods.length ? '全部健康' : healthyCount ? '部分异常' : '异常';
+    const methods = group.methods.map(target => {
+      const method = String(target.balancer || 'proxy').toUpperCase();
+      return `<div class="balance-method">
+        <div class="balance-method-left">
+          <span class="balance-method-label">${escapeHtml(method)}</span>
+          <code>${escapeHtml(target.host)}:${escapeHtml(target.port)}</code>
+        </div>
+        <div class="balance-method-meta">
+          ${statusPill(target.healthy ? 'ok' : 'err', target.healthy ? '健康' : '异常')}
+          <div class="subtle">${formatBytes(target.total_bytes)} / ${target.total_connections || 0} 连接</div>
+        </div>
+      </div>`;
+    }).join('');
+    return `<div class="balance-row">
+    <div class="balance-node-head">
+      <div>
+        <strong>${escapeHtml(group.label)}</strong>
+        <div class="subtle">${group.methods.length} 种代理方式 / ${formatBytes(totalBytes)} / ${totalConnections} 连接</div>
+      </div>
+      ${statusPill(nodeState, nodeText)}
     </div>
-    <div style="text-align:right">
-      ${statusPill(target.healthy ? 'ok' : 'err', target.healthy ? '健康' : '异常')}
-      <div class="subtle">${formatBytes(target.total_bytes)} / ${target.total_connections || 0} 连接</div>
-    </div>
-  </div>`).join('');
+    <div class="balance-methods">${methods}</div>
+  </div>`;
+  }).join('');
 }
 
 function renderActivities(nodes, targets) {
