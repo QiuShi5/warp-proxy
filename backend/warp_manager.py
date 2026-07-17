@@ -215,7 +215,7 @@ def _license_for_response(license_info: dict, current_id: Optional[str]) -> dict
 
 
 @_warp_operation
-def generate_license() -> dict:
+def generate_license(bind: bool = False) -> dict:
     """
     Generate a new anonymous WARP registration and add it to the pool.
 
@@ -225,8 +225,7 @@ def generate_license() -> dict:
       3. Register new WARP account
       4. Connect and verify IP
       5. Backup the new registration data
-      6. Restore the previous managed registration, or keep the new
-         registration active when no managed license was current
+      6. Restore the previous managed registration unless binding was requested
       7. Return the new license metadata
     """
     logger.info("Generating new WARP license...")
@@ -237,7 +236,6 @@ def generate_license() -> dict:
     if current_id and (LICENSES_DIR / current_id / "registration").exists():
         current_backup = current_id
         logger.info(f"Will restore current license [{current_id}] after generation")
-    activate_new_license = current_backup is None
 
     temp_backup = None
     if WARP_DATA_DIR.exists() and any(WARP_DATA_DIR.iterdir()):
@@ -298,7 +296,8 @@ def generate_license() -> dict:
         if WARP_DATA_DIR.exists():
             _copy_directory_contents(WARP_DATA_DIR, new_license_dir)
 
-        status = "active" if connected and activate_new_license else "available" if connected else "unverified"
+        bind_new_license = bind and connected
+        status = "active" if bind_new_license else "available" if connected else "unverified"
 
         # Save metadata
         meta = {
@@ -326,14 +325,35 @@ def generate_license() -> dict:
 
         logger.info(f"New license [{new_id}] generated and added to pool")
 
-        # 6. Restore previous registration if needed
-        if current_backup:
+        # 6. Bind the new registration only when explicitly requested.
+        if bind_new_license:
+            set_current_license_id(new_id)
+            index = load_license_index()
+            for lic in index["licenses"]:
+                if lic["id"] == new_id:
+                    lic["status"] = "active"
+                    lic["last_ip"] = initial_ip
+                elif lic.get("status") == "active":
+                    lic["status"] = "available"
+            save_license_index(index)
+            logger.info(f"License [{new_id}] is now the current managed license")
+        elif current_backup:
             switch_to_license(current_backup, restore_mode=True)
         else:
-            set_current_license_id(new_id)
-            logger.info(f"License [{new_id}] is now the current managed license")
+            if temp_backup:
+                _restore_data_dir(temp_backup)
+            else:
+                _stop_warp_svc()
+                _clear_directory_contents(WARP_DATA_DIR)
+                _start_warp_svc()
+            set_current_license_id(None)
 
-        return {"success": True, "license_id": new_id, "ip": initial_ip}
+        return {
+            "success": True,
+            "license_id": new_id,
+            "ip": initial_ip,
+            "bound": bind_new_license,
+        }
 
     except Exception as e:
         logger.error(f"Failed to generate license: {e}")
@@ -537,28 +557,24 @@ def disconnect_warp() -> dict:
 @_warp_operation
 def rotate_license() -> dict:
     """
-    Rotate to the next available license in the pool.
-    Cycles through the pool sequentially.
+    Replace the currently bound license with a freshly generated one.
+
+    The old current license is removed from the pool only after the new
+    registration was generated and bound successfully.
     """
-    index = load_license_index()
-    licenses = index.get("licenses", [])
-    if not licenses:
-        raise RuntimeError("No licenses in pool. Generate at least one first.")
+    old_license_id = get_current_license_id()
+    result = generate_license(bind=True)
 
-    current_id = get_current_license_id()
+    new_license_id = result.get("license_id")
+    if result.get("bound") and old_license_id and old_license_id != new_license_id:
+        try:
+            delete_license(old_license_id)
+            result["replaced_license_id"] = old_license_id
+        except Exception as e:
+            logger.warning(f"Generated replacement license but failed to delete old license [{old_license_id}]: {e}")
+            result["replace_warning"] = str(e)
 
-    # Find current position in pool
-    current_idx = -1
-    for i, lic in enumerate(licenses):
-        if lic["id"] == current_id:
-            current_idx = i
-            break
-
-    # Get next license (or first if current not found)
-    next_idx = (current_idx + 1) % len(licenses)
-    next_license = licenses[next_idx]
-
-    return switch_to_license(next_license["id"])
+    return result
 
 
 # ?? Settings ?????????????????????????????????????????????????????????

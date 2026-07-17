@@ -331,7 +331,6 @@
         </div>
         <button id="refreshBtn" class="btn">??</button>
         <button id="rotateAllBtn" class="btn amber">????</button>
-        <button id="generateAllBtn" class="btn secondary">???? License</button>
         <div class="profile"><span class="avatar"></span><strong>admin</strong></div>
       </div>
     </header>
@@ -375,7 +374,6 @@
                 <option value="connected">??</option>
                 <option value="warning">??/??</option>
               </select>
-              <button id="nodeGenerateBtn" class="btn">?? License</button>
             </div>
           </div>
           <div class="table-wrap">
@@ -898,8 +896,6 @@ document.addEventListener('click', event => {
 byId('refreshBtn').addEventListener('click', refreshAll);
 byId('activityRefreshBtn').addEventListener('click', refreshAll);
 byId('rotateAllBtn').addEventListener('click', () => clusterAction('/api/cluster/rotate', '????'));
-byId('generateAllBtn').addEventListener('click', () => clusterAction('/api/cluster/licenses/generate', '???? License'));
-byId('nodeGenerateBtn').addEventListener('click', () => selectedNodeId ? nodeAction(selectedNodeId, 'licenses/generate') : clusterAction('/api/cluster/licenses/generate', '???? License'));
 byId('licensesRefreshBtn').addEventListener('click', refreshAll);
 byId('licensesGenerateBtn').addEventListener('click', () => selectedNodeId ? nodeAction(selectedNodeId, 'licenses/generate') : clusterAction('/api/cluster/licenses/generate', '???? License'));
 byId('settingsReadBtn').addEventListener('click', () => selectedNodeId && loadNodeSettings(selectedNodeId));

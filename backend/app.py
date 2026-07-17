@@ -268,7 +268,7 @@ async def api_disconnect():
 
 @app.post("/api/rotate")
 async def api_rotate():
-    """Rotate to next license in pool."""
+    """Replace the node's current license with a newly generated one."""
     try:
         return rotate_license()
     except Exception as e:
@@ -288,7 +288,7 @@ async def api_list_licenses():
 
 @app.post("/api/licenses/generate")
 async def api_generate_license():
-    """Generate a new anonymous WARP license."""
+    """Generate a new anonymous WARP license into the idle pool."""
     try:
         result = generate_license()
         return result
