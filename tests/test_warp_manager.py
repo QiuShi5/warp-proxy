@@ -90,6 +90,92 @@ class WarpManagerTests(unittest.TestCase):
         finally:
             warp_manager.WARP_DATA_DIR = old_warp_data_dir
 
+    def test_first_generated_license_becomes_current_without_restoring_temp_backup(self):
+        old_paths = (
+            warp_manager.WARP_DATA_DIR,
+            warp_manager.DATA_DIR,
+            warp_manager.LICENSES_DIR,
+            warp_manager.LICENSES_INDEX,
+            warp_manager.CURRENT_LICENSE_FILE,
+        )
+        try:
+            with tempfile.TemporaryDirectory() as tmp:
+                tmp_path = Path(tmp)
+                warp_root = tmp_path / "warp-data"
+                data_root = tmp_path / "data"
+                licenses_dir = data_root / "licenses"
+                warp_root.mkdir(parents=True)
+                (warp_root / "old-registration").write_text("old", encoding="utf-8")
+                warp_manager.WARP_DATA_DIR = warp_root
+                warp_manager.DATA_DIR = data_root
+                warp_manager.LICENSES_DIR = licenses_dir
+                warp_manager.LICENSES_INDEX = licenses_dir / "index.json"
+                warp_manager.CURRENT_LICENSE_FILE = data_root / "current_license_id"
+
+                def fake_run_cmd(cmd, timeout=30, check=False):
+                    if cmd[-2:] == ["registration", "new"]:
+                        (warp_root / "new-registration").write_text("new", encoding="utf-8")
+                    return self._cmd_result()
+
+                with patch.object(warp_manager, "_run_cmd", side_effect=fake_run_cmd), patch.object(
+                    warp_manager, "_get_warp_status", return_value="connected"
+                ), patch.object(warp_manager, "_check_external_ip", return_value="203.0.113.10"), patch.object(
+                    warp_manager, "_stop_warp_svc"
+                ), patch.object(
+                    warp_manager, "_start_warp_svc"
+                ), patch.object(
+                    warp_manager.time, "sleep"
+                ), patch.object(
+                    warp_manager.uuid, "uuid4", return_value="license-1"
+                ):
+                    result = warp_manager.generate_license()
+
+                self.assertEqual(result["license_id"], "license-1")
+                self.assertEqual(warp_manager.get_current_license_id(), "license-1")
+                self.assertFalse((warp_root / "old-registration").exists())
+                self.assertEqual((warp_root / "new-registration").read_text(encoding="utf-8"), "new")
+                licenses = warp_manager.list_licenses()
+                self.assertEqual(len(licenses), 1)
+                self.assertTrue(licenses[0]["is_current"])
+                self.assertEqual(licenses[0]["status"], "active")
+        finally:
+            (
+                warp_manager.WARP_DATA_DIR,
+                warp_manager.DATA_DIR,
+                warp_manager.LICENSES_DIR,
+                warp_manager.LICENSES_INDEX,
+                warp_manager.CURRENT_LICENSE_FILE,
+            ) = old_paths
+
+    def test_list_licenses_demotes_stale_active_status_when_not_current(self):
+        old_index_path = warp_manager.LICENSES_INDEX
+        old_current_file = warp_manager.CURRENT_LICENSE_FILE
+        try:
+            with tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                warp_manager.LICENSES_INDEX = root / "licenses" / "index.json"
+                warp_manager.CURRENT_LICENSE_FILE = root / "current_license_id"
+                warp_manager.set_current_license_id("current-license")
+                warp_manager.save_license_index(
+                    {
+                        "last_id": 2,
+                        "licenses": [
+                            {"id": "stale-license", "status": "active"},
+                            {"id": "current-license", "status": "active"},
+                        ],
+                    }
+                )
+
+                licenses = warp_manager.list_licenses()
+
+                self.assertEqual(licenses[0]["status"], "available")
+                self.assertFalse(licenses[0]["is_current"])
+                self.assertEqual(licenses[1]["status"], "active")
+                self.assertTrue(licenses[1]["is_current"])
+        finally:
+            warp_manager.LICENSES_INDEX = old_index_path
+            warp_manager.CURRENT_LICENSE_FILE = old_current_file
+
 
 if __name__ == "__main__":
     unittest.main()

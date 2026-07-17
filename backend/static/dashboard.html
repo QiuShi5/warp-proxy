@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>warp-proxy 管理面板</title>
+<title>warp-proxy ????</title>
 <style>
   :root {
     color-scheme: dark;
@@ -301,66 +301,66 @@
 <div class="app">
   <aside class="sidebar">
     <div class="brand"><span class="brand-mark"></span><span>WARP Proxy Manager</span></div>
-    <nav class="nav" aria-label="主导航">
-      <a href="#overview" class="active"><span class="nav-icon">O</span>总览</a>
-      <a href="#nodes"><span class="nav-icon">N</span>节点管理</a>
-      <a href="#licenses"><span class="nav-icon">L</span>License 管理</a>
-      <a href="#balancer"><span class="nav-icon">B</span>负载均衡</a>
-      <a href="#settings"><span class="nav-icon">S</span>节点设置</a>
-      <a href="#logs"><span class="nav-icon">G</span>日志</a>
+    <nav class="nav" aria-label="???">
+      <a href="#overview" class="active"><span class="nav-icon">O</span>??</a>
+      <a href="#nodes"><span class="nav-icon">N</span>????</a>
+      <a href="#licenses"><span class="nav-icon">L</span>License ??</a>
+      <a href="#balancer"><span class="nav-icon">B</span>????</a>
+      <a href="#settings"><span class="nav-icon">S</span>????</a>
+      <a href="#logs"><span class="nav-icon">G</span>??</a>
     </nav>
     <div class="side-card">
       <dl>
-        <div><dt>运行状态</dt><dd id="sideStatus">检查中</dd></div>
-        <div><dt>运行版本</dt><dd>v1.0.0</dd></div>
-        <div><dt>节点总数</dt><dd id="sideNodeCount">0</dd></div>
-        <div><dt>健康节点</dt><dd id="sideHealthyCount">0</dd></div>
-        <div><dt>告警节点</dt><dd id="sideWarnCount">0</dd></div>
+        <div><dt>????</dt><dd id="sideStatus">???</dd></div>
+        <div><dt>????</dt><dd>v1.0.0</dd></div>
+        <div><dt>????</dt><dd id="sideNodeCount">0</dd></div>
+        <div><dt>????</dt><dd id="sideHealthyCount">0</dd></div>
+        <div><dt>????</dt><dd id="sideWarnCount">0</dd></div>
       </dl>
     </div>
   </aside>
 
   <main class="main">
     <header class="topbar" id="overview">
-      <h1>统一管理面板</h1>
+      <h1>??????</h1>
       <div class="tools">
         <div class="search">
-          <span>查</span>
-          <input id="searchInput" placeholder="搜索节点、IP、License..." autocomplete="off">
+          <span>?</span>
+          <input id="searchInput" placeholder="?????IP?License..." autocomplete="off">
           <kbd>Ctrl K</kbd>
         </div>
-        <button id="refreshBtn" class="btn">刷新</button>
-        <button id="rotateAllBtn" class="btn amber">批量轮换</button>
-        <button id="generateAllBtn" class="btn secondary">批量生成 License</button>
+        <button id="refreshBtn" class="btn">??</button>
+        <button id="rotateAllBtn" class="btn amber">????</button>
+        <button id="generateAllBtn" class="btn secondary">???? License</button>
         <div class="profile"><span class="avatar"></span><strong>admin</strong></div>
       </div>
     </header>
 
-    <section class="cards" aria-label="指标">
+    <section class="cards" aria-label="??">
       <article class="metric green">
-        <div class="metric-head"><span class="metric-icon">N</span><span class="metric-label">在线节点</span></div>
+        <div class="metric-head"><span class="metric-icon">N</span><span class="metric-label">????</span></div>
         <div id="statOnline" class="metric-value">0 / 0</div>
-        <div class="metric-sub"><strong id="statOnlineRate">0%</strong> 在线率</div>
+        <div class="metric-sub"><strong id="statOnlineRate">0%</strong> ???</div>
       </article>
       <article class="metric">
-        <div class="metric-head"><span class="metric-icon">IP</span><span class="metric-label">当前出口 IP</span></div>
+        <div class="metric-head"><span class="metric-icon">IP</span><span class="metric-label">???? IP</span></div>
         <div id="statExitIp" class="metric-value">-</div>
-        <div id="statExitNode" class="metric-sub">等待节点上报</div>
+        <div id="statExitNode" class="metric-sub">??????</div>
       </article>
       <article class="metric">
-        <div class="metric-head"><span class="metric-icon">L</span><span class="metric-label">License 池</span></div>
+        <div class="metric-head"><span class="metric-icon">L</span><span class="metric-label">License ?</span></div>
         <div id="statLicenses" class="metric-value">0</div>
-        <div id="statLicenseSub" class="metric-sub">0 个当前绑定</div>
+        <div id="statLicenseSub" class="metric-sub">0 ?????</div>
       </article>
       <article class="metric cyan">
-        <div class="metric-head"><span class="metric-icon">R</span><span class="metric-label">刷新间隔</span></div>
-        <div class="metric-value">15 秒</div>
-        <div id="nextRefresh" class="metric-sub">自动刷新启用</div>
+        <div class="metric-head"><span class="metric-icon">R</span><span class="metric-label">????</span></div>
+        <div class="metric-value">15 ?</div>
+        <div id="nextRefresh" class="metric-sub">??????</div>
       </article>
       <article class="metric amber">
-        <div class="metric-head"><span class="metric-icon">T</span><span class="metric-label">总流量</span></div>
+        <div class="metric-head"><span class="metric-icon">T</span><span class="metric-label">???</span></div>
         <div id="statTraffic" class="metric-value">0 B</div>
-        <div id="statConnections" class="metric-sub">0 次连接</div>
+        <div id="statConnections" class="metric-sub">0 ???</div>
       </article>
     </section>
 
@@ -368,48 +368,48 @@
       <div class="stack">
         <section class="panel" id="nodes">
           <div class="panel-head">
-            <div class="panel-title"><h2>节点管理</h2><span id="nodeCountBadge" class="count">0</span></div>
+            <div class="panel-title"><h2>????</h2><span id="nodeCountBadge" class="count">0</span></div>
             <div class="panel-tools">
               <select id="statusFilter">
-                <option value="all">全部状态</option>
-                <option value="connected">在线</option>
-                <option value="warning">告警/离线</option>
+                <option value="all">????</option>
+                <option value="connected">??</option>
+                <option value="warning">??/??</option>
               </select>
-              <button id="nodeGenerateBtn" class="btn">生成 License</button>
+              <button id="nodeGenerateBtn" class="btn">?? License</button>
             </div>
           </div>
           <div class="table-wrap">
             <table>
               <thead>
                 <tr>
-                  <th>节点名称</th>
-                  <th>状态</th>
-                  <th>网络</th>
-                  <th>连通性</th>
-                  <th>当前 IP</th>
-                  <th>当前 License</th>
-                  <th>代理端口</th>
-                  <th>操作</th>
+                  <th>????</th>
+                  <th>??</th>
+                  <th>??</th>
+                  <th>???</th>
+                  <th>?? IP</th>
+                  <th>?? License</th>
+                  <th>????</th>
+                  <th>??</th>
                 </tr>
               </thead>
-              <tbody id="nodeRows"><tr><td colspan="8" class="empty">加载中...</td></tr></tbody>
+              <tbody id="nodeRows"><tr><td colspan="8" class="empty">???...</td></tr></tbody>
             </table>
           </div>
         </section>
 
         <section class="panel" id="licenses">
           <div class="panel-head">
-            <div class="panel-title"><h2>License 管理</h2><span id="licenseCountBadge" class="count">0</span></div>
+            <div class="panel-title"><h2>License ??</h2><span id="licenseCountBadge" class="count">0</span></div>
             <div class="panel-tools">
-              <button id="licensesRefreshBtn" class="btn secondary">刷新</button>
-              <button id="licensesGenerateBtn" class="btn">生成 License</button>
+              <button id="licensesRefreshBtn" class="btn secondary">??</button>
+              <button id="licensesGenerateBtn" class="btn">?? License</button>
             </div>
           </div>
-          <div id="licenseGrid" class="license-grid"><div class="empty">选择一个节点查看 License 池</div></div>
+          <div id="licenseGrid" class="license-grid"><div class="empty">???????? License ?</div></div>
         </section>
 
         <section class="panel">
-          <div class="panel-head"><h2>代理流量趋势</h2><div class="subtle">基于管理端负载均衡统计</div></div>
+          <div class="panel-head"><h2>??????</h2><div class="subtle">???????????</div></div>
           <div class="chart-wrap"><canvas id="trafficChart" width="1000" height="240"></canvas></div>
         </section>
       </div>
@@ -417,44 +417,44 @@
       <aside class="side-grid">
         <section class="panel" id="balancer">
           <div class="panel-head">
-            <h2>负载均衡</h2>
-            <span id="balancerState" class="status warn">检查中</span>
+            <h2>????</h2>
+            <span id="balancerState" class="status warn">???</span>
           </div>
-          <div id="balanceList" class="balance-list"><div class="empty">加载中...</div></div>
+          <div id="balanceList" class="balance-list"><div class="empty">???...</div></div>
         </section>
 
         <section class="panel" id="settings">
           <div class="panel-head">
-            <h2>节点设置</h2>
-            <span id="selectedNodeLabel" class="subtle">未选择节点</span>
+            <h2>????</h2>
+            <span id="selectedNodeLabel" class="subtle">?????</span>
           </div>
           <div class="settings-form">
             <div class="settings-grid">
-              <label>自动轮换间隔（分钟）<input class="field" id="settingInterval" type="number" min="0" value="0"></label>
-              <label>健康检查间隔（秒）<input class="field" id="settingHealth" type="number" min="10" max="3600" value="60"></label>
+              <label>??????????<input class="field" id="settingInterval" type="number" min="0" value="0"></label>
+              <label>?????????<input class="field" id="settingHealth" type="number" min="10" max="3600" value="60"></label>
             </div>
-            <label class="checkbox-line"><input id="settingAuto" type="checkbox">启用自动轮换</label>
+            <label class="checkbox-line"><input id="settingAuto" type="checkbox">??????</label>
             <div class="actions" style="justify-content:flex-start;margin-top:12px;">
-              <button id="settingsReadBtn" class="btn secondary">读取设置</button>
-              <button id="settingsSaveBtn" class="btn">保存设置</button>
+              <button id="settingsReadBtn" class="btn secondary">????</button>
+              <button id="settingsSaveBtn" class="btn">????</button>
             </div>
           </div>
         </section>
 
         <section class="panel">
-          <div class="panel-head"><h2>最近活动</h2><button id="activityRefreshBtn" class="btn secondary">刷新</button></div>
-          <div id="activityList" class="activity-list"><div class="empty">暂无活动</div></div>
+          <div class="panel-head"><h2>????</h2><button id="activityRefreshBtn" class="btn secondary">??</button></div>
+          <div id="activityList" class="activity-list"><div class="empty">????</div></div>
         </section>
 
         <section class="panel" id="logs">
           <div class="panel-head">
-            <h2>节点日志</h2>
+            <h2>????</h2>
             <div class="panel-tools">
-              <button id="logsRefreshBtn" class="btn secondary">刷新</button>
-              <button id="logsClearBtn" class="btn red">清空</button>
+              <button id="logsRefreshBtn" class="btn secondary">??</button>
+              <button id="logsClearBtn" class="btn red">??</button>
             </div>
           </div>
-          <div class="log-box"><pre id="nodeLogs">选择一个节点查看日志</pre></div>
+          <div class="log-box"><pre id="nodeLogs">??????????</pre></div>
         </section>
       </aside>
     </div>
@@ -561,18 +561,18 @@ function render(data) {
   byId('statOnline').textContent = `${connected} / ${total}`;
   byId('statOnlineRate').textContent = total ? `${Math.round(connected * 100 / total)}%` : '0%';
   byId('statExitIp').textContent = firstConnected?.status?.external_ip || '-';
-  byId('statExitNode').textContent = firstConnected ? `${firstConnected.id} / Cloudflare WARP` : '等待节点上报';
+  byId('statExitNode').textContent = firstConnected ? `${firstConnected.id} / Cloudflare WARP` : '??????';
   byId('statLicenses').textContent = licenses.length;
-  byId('statLicenseSub').textContent = `${licenses.filter(item => item.is_current).length} 个当前绑定`;
+  byId('statLicenseSub').textContent = `${licenses.filter(item => item.is_current).length} ?????`;
   byId('statTraffic').textContent = formatBytes(totalBytes);
-  byId('statConnections').textContent = `${totalConnections} 次连接`;
-  byId('sideStatus').textContent = warningNodes ? '需要关注' : '运行中';
+  byId('statConnections').textContent = `${totalConnections} ???`;
+  byId('sideStatus').textContent = warningNodes ? '????' : '???';
   byId('sideNodeCount').textContent = total;
   byId('sideHealthyCount').textContent = connected;
   byId('sideWarnCount').textContent = warningNodes;
   byId('nodeCountBadge').textContent = total;
   byId('licenseCountBadge').textContent = licenses.length;
-  byId('selectedNodeLabel').textContent = selectedNodeId || '未选择节点';
+  byId('selectedNodeLabel').textContent = selectedNodeId || '?????';
 
   recordTraffic(totalBytes);
   renderNodes(nodes);
@@ -596,7 +596,7 @@ function renderNodes(nodes) {
 
   const rows = byId('nodeRows');
   if (!visible.length) {
-    rows.innerHTML = '<tr><td colspan="8" class="empty">没有匹配节点</td></tr>';
+    rows.innerHTML = '<tr><td colspan="8" class="empty">??????</td></tr>';
     return;
   }
 
@@ -604,9 +604,9 @@ function renderNodes(nodes) {
     const status = node.status || {};
     const connected = node.reachable && status.warp_status === 'connected';
     const state = connected ? 'ok' : node.reachable ? 'warn' : 'err';
-    const stateText = connected ? '在线' : node.reachable ? (status.warp_status || '未连接') : '离线';
-    const connectivity = node.reachable ? 'API 可达' : 'API 不可达';
-    const network = node.base_url === 'local' ? '本地容器' : 'Docker 内部网络';
+    const stateText = connected ? '??' : node.reachable ? (status.warp_status || '???') : '??';
+    const connectivity = node.reachable ? 'API ??' : 'API ???';
+    const network = node.base_url === 'local' ? '????' : 'Docker ????';
     const encodedId = escapeAttr(node.id);
     return `<tr class="${node.id === selectedNodeId ? 'selected' : ''}">
       <td><div class="node-name">${escapeHtml(node.id)}</div><div class="subtle">${escapeHtml(node.base_url || '-')}</div></td>
@@ -618,10 +618,10 @@ function renderNodes(nodes) {
       <td><code>1080 / 8080</code></td>
       <td>
         <div class="actions">
-          <button class="btn secondary" data-select-node="${encodedId}">查看</button>
-          <button class="btn green" data-node-id="${encodedId}" data-node-action="connect">连接</button>
-          <button class="btn amber" data-node-id="${encodedId}" data-node-action="rotate">轮换</button>
-          <button class="btn red" data-node-id="${encodedId}" data-node-action="disconnect">断开</button>
+          <button class="btn secondary" data-select-node="${encodedId}">??</button>
+          <button class="btn green" data-node-id="${encodedId}" data-node-action="connect">??</button>
+          <button class="btn amber" data-node-id="${encodedId}" data-node-action="rotate">??</button>
+          <button class="btn red" data-node-id="${encodedId}" data-node-action="disconnect">??</button>
         </div>
       </td>
     </tr>`;
@@ -631,32 +631,33 @@ function renderNodes(nodes) {
 function renderLicenses(node) {
   const grid = byId('licenseGrid');
   if (!node) {
-    grid.innerHTML = '<div class="empty">没有节点数据</div>';
+    grid.innerHTML = '<div class="empty">??????</div>';
     return;
   }
   const licenses = node.licenses || [];
   byId('selectedNodeLabel').textContent = node.id;
   if (!licenses.length) {
-    grid.innerHTML = `<div class="empty">${escapeHtml(node.id)} 还没有 License</div>`;
+    grid.innerHTML = `<div class="empty">${escapeHtml(node.id)} ??? License</div>`;
     return;
   }
   grid.innerHTML = licenses.slice(0, 12).map((license, index) => {
-    const active = license.is_current || license.status === 'active';
+    const active = Boolean(license.is_current);
+    const stateText = active ? '??' : license.status === 'available' ? '??' : (license.status || '??');
     const percent = Math.max(12, Math.min(95, active ? 70 : 30 + index * 8));
     const nodeId = escapeAttr(node.id);
     const licenseId = escapeAttr(license.id);
     return `<article class="license-card">
       <div class="license-top">
         <div><div class="license-id">${escapeHtml(license.label || shortId(license.id))}</div><code>${escapeHtml(shortId(license.id))}</code></div>
-        ${statusPill(active ? 'ok' : 'warn', active ? '活跃' : (license.status || '备用'))}
+        ${statusPill(active ? 'ok' : 'warn', stateText)}
       </div>
-      <div class="license-row"><span>绑定节点</span><strong>${escapeHtml(node.id)}</strong></div>
-      <div class="license-row"><span>初始 IP</span><code>${escapeHtml(license.initial_ip || '-')}</code></div>
-      <div class="license-row"><span>创建时间</span><span>${escapeHtml(String(license.created_at || '-').slice(0, 10))}</span></div>
+      <div class="license-row"><span>????</span><strong>${active ? escapeHtml(node.id) : '-'}</strong></div>
+      <div class="license-row"><span>?? IP</span><code>${escapeHtml(license.initial_ip || '-')}</code></div>
+      <div class="license-row"><span>????</span><span>${escapeHtml(String(license.created_at || '-').slice(0, 10))}</span></div>
       <div class="bar"><span style="width:${percent}%"></span></div>
       <div class="actions" style="justify-content:flex-start">
-        ${active ? '' : `<button class="btn secondary" data-node-id="${nodeId}" data-license-id="${licenseId}" data-license-action="activate">切换</button>`}
-        ${active ? '' : `<button class="btn red" data-node-id="${nodeId}" data-license-id="${licenseId}" data-license-action="delete">删除</button>`}
+        ${active ? '' : `<button class="btn secondary" data-node-id="${nodeId}" data-license-id="${licenseId}" data-license-action="activate">??</button>`}
+        ${active ? '' : `<button class="btn red" data-node-id="${nodeId}" data-license-id="${licenseId}" data-license-action="delete">??</button>`}
       </div>
     </article>`;
   }).join('');
@@ -668,9 +669,9 @@ function renderBalancers(balancers) {
   const targets = entries.flatMap(balancer => (balancer.targets || []).map(target => ({ ...target, balancer: balancer.name, bind_port: balancer.bind_port })));
   const hasHealthyTarget = targets.some(target => target.healthy);
   byId('balancerState').className = `status ${hasHealthyTarget ? 'ok' : 'err'}`;
-  byId('balancerState').textContent = hasHealthyTarget ? '已启用' : '无健康目标';
+  byId('balancerState').textContent = hasHealthyTarget ? '???' : '?????';
   if (!targets.length) {
-    list.innerHTML = '<div class="empty">没有负载均衡目标</div>';
+    list.innerHTML = '<div class="empty">????????</div>';
     return;
   }
   list.innerHTML = targets.map(target => `<div class="balance-row">
@@ -679,8 +680,8 @@ function renderBalancers(balancers) {
       <div class="subtle">${escapeHtml(target.balancer)} / ${escapeHtml(target.host)}:${escapeHtml(target.port)}</div>
     </div>
     <div style="text-align:right">
-      ${statusPill(target.healthy ? 'ok' : 'err', target.healthy ? '健康' : '异常')}
-      <div class="subtle">${formatBytes(target.total_bytes)} / ${target.total_connections || 0} 连接</div>
+      ${statusPill(target.healthy ? 'ok' : 'err', target.healthy ? '??' : '??')}
+      <div class="subtle">${formatBytes(target.total_bytes)} / ${target.total_connections || 0} ??</div>
     </div>
   </div>`).join('');
 }
@@ -692,17 +693,17 @@ function renderActivities(nodes, targets) {
     const connected = node.reachable && status.warp_status === 'connected';
     activities.push({
       type: connected ? 'OK' : '!',
-      title: `${node.id} ${node.reachable ? status.warp_status || 'unknown' : '不可访问'}`,
+      title: `${node.id} ${node.reachable ? status.warp_status || 'unknown' : '????'}`,
       note: `IP: ${status.external_ip || '-'} / License: ${shortId(status.current_license_id || '-')}`,
     });
   }
   for (const target of targets.filter(item => !item.healthy)) {
-    activities.push({ type: '!', title: `${target.label} 负载目标异常`, note: target.last_error || '连接失败' });
+    activities.push({ type: '!', title: `${target.label} ??????`, note: target.last_error || '????' });
   }
   byId('activityList').innerHTML = activities.slice(0, 8).map(item => `<div class="activity-row">
     <div class="activity-left"><span class="activity-dot">${escapeHtml(item.type)}</span><div><div class="activity-title">${escapeHtml(item.title)}</div><div class="activity-note">${escapeHtml(item.note)}</div></div></div>
-    <span class="subtle">刚刚</span>
-  </div>`).join('') || '<div class="empty">暂无活动</div>';
+    <span class="subtle">??</span>
+  </div>`).join('') || '<div class="empty">????</div>';
 }
 
 function recordTraffic(totalBytes) {
@@ -767,7 +768,7 @@ async function refreshAll() {
       await loadNodeLogs(selectedNodeId);
     }
   } catch (error) {
-    showToast(`刷新失败: ${error.message}`, 'error');
+    showToast(`????: ${error.message}`, 'error');
   }
 }
 
@@ -780,45 +781,45 @@ async function selectNode(nodeId) {
 
 async function nodeAction(nodeId, action) {
   try {
-    showToast('操作执行中...');
+    showToast('?????...');
     await apiJson(nodeUrl(nodeId, `/${action}`), { method: 'POST' });
-    showToast('操作完成', 'success');
+    showToast('????', 'success');
     selectedNodeId = nodeId;
     setTimeout(refreshAll, 1000);
   } catch (error) {
-    showToast(`操作失败: ${error.message}`, 'error');
+    showToast(`????: ${error.message}`, 'error');
   }
 }
 
 async function clusterAction(url, label) {
   try {
-    showToast(`${label}执行中...`);
+    showToast(`${label}???...`);
     await apiJson(url, { method: 'POST' });
-    showToast(`${label}已下发`, 'success');
+    showToast(`${label}???`, 'success');
     setTimeout(refreshAll, 1200);
   } catch (error) {
-    showToast(`${label}失败: ${error.message}`, 'error');
+    showToast(`${label}??: ${error.message}`, 'error');
   }
 }
 
 async function activateLicense(nodeId, licenseId) {
   try {
     await apiJson(nodeUrl(nodeId, `/licenses/${encodeURIComponent(licenseId)}/activate`), { method: 'POST' });
-    showToast('License 已切换', 'success');
+    showToast('License ???', 'success');
     await refreshAll();
   } catch (error) {
-    showToast(`切换失败: ${error.message}`, 'error');
+    showToast(`????: ${error.message}`, 'error');
   }
 }
 
 async function deleteLicense(nodeId, licenseId) {
-  if (!confirm(`确定删除 License ${shortId(licenseId)}?`)) return;
+  if (!confirm(`???? License ${shortId(licenseId)}?`)) return;
   try {
     await apiJson(nodeUrl(nodeId, `/licenses/${encodeURIComponent(licenseId)}`), { method: 'DELETE' });
-    showToast('License 已删除', 'success');
+    showToast('License ???', 'success');
     await refreshAll();
   } catch (error) {
-    showToast(`删除失败: ${error.message}`, 'error');
+    showToast(`????: ${error.message}`, 'error');
   }
 }
 
@@ -830,13 +831,13 @@ async function loadNodeSettings(nodeId) {
     byId('settingHealth').value = settings.health_check_interval ?? 60;
     byId('settingAuto').checked = !!settings.auto_rotate;
   } catch (error) {
-    showToast(`读取设置失败: ${error.message}`, 'error');
+    showToast(`??????: ${error.message}`, 'error');
   }
 }
 
 async function saveNodeSettings() {
   if (!selectedNodeId) {
-    showToast('请先选择节点', 'error');
+    showToast('??????', 'error');
     return;
   }
   const payload = {
@@ -846,32 +847,32 @@ async function saveNodeSettings() {
   };
   try {
     await apiJson(nodeUrl(selectedNodeId, '/settings'), { method: 'POST', body: payload });
-    showToast('设置已保存', 'success');
+    showToast('?????', 'success');
   } catch (error) {
-    showToast(`保存失败: ${error.message}`, 'error');
+    showToast(`????: ${error.message}`, 'error');
   }
 }
 
 async function loadNodeLogs(nodeId) {
   try {
     const data = await apiJson(nodeUrl(nodeId, '/logs?tail=220'));
-    byId('nodeLogs').textContent = (data.logs || []).join('\n') || '暂无日志';
+    byId('nodeLogs').textContent = (data.logs || []).join('\n') || '????';
   } catch (error) {
-    showToast(`读取日志失败: ${error.message}`, 'error');
+    showToast(`??????: ${error.message}`, 'error');
   }
 }
 
 async function clearNodeLogs() {
   if (!selectedNodeId) {
-    showToast('请先选择节点', 'error');
+    showToast('??????', 'error');
     return;
   }
   try {
     await apiJson(nodeUrl(selectedNodeId, '/logs/clear'), { method: 'POST' });
-    byId('nodeLogs').textContent = '日志已清空';
-    showToast('日志已清空', 'success');
+    byId('nodeLogs').textContent = '?????';
+    showToast('?????', 'success');
   } catch (error) {
-    showToast(`清空失败: ${error.message}`, 'error');
+    showToast(`????: ${error.message}`, 'error');
   }
 }
 
@@ -896,11 +897,11 @@ document.addEventListener('click', event => {
 
 byId('refreshBtn').addEventListener('click', refreshAll);
 byId('activityRefreshBtn').addEventListener('click', refreshAll);
-byId('rotateAllBtn').addEventListener('click', () => clusterAction('/api/cluster/rotate', '批量轮换'));
-byId('generateAllBtn').addEventListener('click', () => clusterAction('/api/cluster/licenses/generate', '批量生成 License'));
-byId('nodeGenerateBtn').addEventListener('click', () => selectedNodeId ? nodeAction(selectedNodeId, 'licenses/generate') : clusterAction('/api/cluster/licenses/generate', '批量生成 License'));
+byId('rotateAllBtn').addEventListener('click', () => clusterAction('/api/cluster/rotate', '????'));
+byId('generateAllBtn').addEventListener('click', () => clusterAction('/api/cluster/licenses/generate', '???? License'));
+byId('nodeGenerateBtn').addEventListener('click', () => selectedNodeId ? nodeAction(selectedNodeId, 'licenses/generate') : clusterAction('/api/cluster/licenses/generate', '???? License'));
 byId('licensesRefreshBtn').addEventListener('click', refreshAll);
-byId('licensesGenerateBtn').addEventListener('click', () => selectedNodeId ? nodeAction(selectedNodeId, 'licenses/generate') : clusterAction('/api/cluster/licenses/generate', '批量生成 License'));
+byId('licensesGenerateBtn').addEventListener('click', () => selectedNodeId ? nodeAction(selectedNodeId, 'licenses/generate') : clusterAction('/api/cluster/licenses/generate', '???? License'));
 byId('settingsReadBtn').addEventListener('click', () => selectedNodeId && loadNodeSettings(selectedNodeId));
 byId('settingsSaveBtn').addEventListener('click', saveNodeSettings);
 byId('logsRefreshBtn').addEventListener('click', () => selectedNodeId && loadNodeLogs(selectedNodeId));
@@ -927,7 +928,7 @@ setInterval(() => {
   if (nextRefreshSeconds <= 0) {
     refreshAll();
   } else {
-    byId('nextRefresh').textContent = `${nextRefreshSeconds} 秒后刷新`;
+    byId('nextRefresh').textContent = `${nextRefreshSeconds} ????`;
   }
 }, 1000);
 

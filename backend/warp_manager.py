@@ -205,6 +205,15 @@ def set_current_license_id(license_id: Optional[str]):
         CURRENT_LICENSE_FILE.unlink()
 
 
+def _license_for_response(license_info: dict, current_id: Optional[str]) -> dict:
+    """Return a license payload with current-binding flags normalized."""
+    item = dict(license_info)
+    item["is_current"] = item.get("id") == current_id
+    if not item["is_current"] and item.get("status") == "active":
+        item["status"] = "available"
+    return item
+
+
 @_warp_operation
 def generate_license() -> dict:
     """
@@ -216,7 +225,8 @@ def generate_license() -> dict:
       3. Register new WARP account
       4. Connect and verify IP
       5. Backup the new registration data
-      6. Restore the previous registration (if any)
+      6. Restore the previous managed registration, or keep the new
+         registration active when no managed license was current
       7. Return the new license metadata
     """
     logger.info("Generating new WARP license...")
@@ -227,6 +237,7 @@ def generate_license() -> dict:
     if current_id and (LICENSES_DIR / current_id / "registration").exists():
         current_backup = current_id
         logger.info(f"Will restore current license [{current_id}] after generation")
+    activate_new_license = current_backup is None
 
     temp_backup = None
     if WARP_DATA_DIR.exists() and any(WARP_DATA_DIR.iterdir()):
@@ -287,13 +298,15 @@ def generate_license() -> dict:
         if WARP_DATA_DIR.exists():
             _copy_directory_contents(WARP_DATA_DIR, new_license_dir)
 
+        status = "active" if connected and activate_new_license else "available" if connected else "unverified"
+
         # Save metadata
         meta = {
             "id": new_id,
             "created_at": datetime.utcnow().isoformat(),
             "initial_ip": initial_ip,
             "connected": connected,
-            "status": "active" if connected else "unverified",
+            "status": status,
         }
         _save_json(LICENSES_DIR / new_id / "meta.json", meta)
 
@@ -316,10 +329,9 @@ def generate_license() -> dict:
         # 6. Restore previous registration if needed
         if current_backup:
             switch_to_license(current_backup, restore_mode=True)
-        elif temp_backup:
-            # Restore from temp backup if no current license tracked
-            _restore_data_dir(temp_backup)
-            set_current_license_id(None)
+        else:
+            set_current_license_id(new_id)
+            logger.info(f"License [{new_id}] is now the current managed license")
 
         return {"success": True, "license_id": new_id, "ip": initial_ip}
 
@@ -414,7 +426,8 @@ def switch_to_license(license_id: str, restore_mode: bool = False) -> dict:
         if lic["id"] == license_id:
             lic["status"] = "active" if connected else "error"
             lic["last_ip"] = new_ip
-            break
+        elif lic.get("status") == "active":
+            lic["status"] = "available"
     save_license_index(index)
 
     return {
@@ -453,9 +466,7 @@ def list_licenses() -> List[dict]:
     """List all licenses in the pool."""
     index = load_license_index()
     current_id = get_current_license_id()
-    for lic in index["licenses"]:
-        lic["is_current"] = (lic["id"] == current_id)
-    return index["licenses"]
+    return [_license_for_response(lic, current_id) for lic in index["licenses"]]
 
 
 def get_license_detail(license_id: str) -> Optional[dict]:
@@ -465,8 +476,7 @@ def get_license_detail(license_id: str) -> Optional[dict]:
         return None
     meta = _load_json(meta_path)
     current_id = get_current_license_id()
-    meta["is_current"] = (meta.get("id") == current_id)
-    return meta
+    return _license_for_response(meta, current_id)
 
 
 # ?? WARP Connection Management ??????????????????????????????????????

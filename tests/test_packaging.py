@@ -50,6 +50,12 @@ class PackagingTests(unittest.TestCase):
         self.assertIn('DASHBOARD_HTML = STATIC_DIR / "dashboard.html"', read_text("backend/app.py"))
         self.assertIn('DASHBOARD_HTML = STATIC_DIR / "dashboard.html"', read_text("backend/cluster_app.py"))
 
+    def test_dashboard_uses_current_binding_for_active_license(self):
+        dashboard = read_text("backend/static/dashboard.html")
+
+        self.assertIn("const active = Boolean(license.is_current);", dashboard)
+        self.assertNotIn("license.is_current || license.status === 'active'", dashboard)
+
     def test_compose_healthchecks_target_existing_api(self):
         for compose_file in (
             "docker-compose.yml",
