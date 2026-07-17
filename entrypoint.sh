@@ -8,11 +8,26 @@ set -euo pipefail
 echo "=== warp-proxy starting ==="
 
 APP_MODE="${APP_MODE:-node}"
+PYTHON_BIN="${PYTHON_BIN:-}"
+
+if [ -n "$PYTHON_BIN" ]; then
+    if ! command -v "$PYTHON_BIN" >/dev/null 2>&1; then
+        echo "ERROR: PYTHON_BIN is set to '$PYTHON_BIN' but it is not executable."
+        exit 1
+    fi
+elif command -v python3 >/dev/null 2>&1; then
+    PYTHON_BIN="python3"
+elif command -v python >/dev/null 2>&1; then
+    PYTHON_BIN="python"
+else
+    echo "ERROR: Neither python3 nor python was found in PATH."
+    exit 1
+fi
 
 if [ "$APP_MODE" = "manager" ]; then
     echo "Starting in manager mode..."
     cd /app
-    exec python -m uvicorn backend.cluster_app:app --host 0.0.0.0 --port 8000 --log-level info
+    exec "$PYTHON_BIN" -m uvicorn backend.cluster_app:app --host 0.0.0.0 --port 8000 --log-level info
 fi
 
 if [ "$APP_MODE" != "node" ]; then
@@ -81,11 +96,30 @@ echo "Initial WARP IP: $CURRENT_IP"
 # ── 6. Start Python backend (web UI + WARP manager) ────────────
 echo "[6/7] Starting web management backend..."
 cd /app
-nohup python -m uvicorn backend.app:app --host 0.0.0.0 --port 8000 --log-level info \
+nohup "$PYTHON_BIN" -m uvicorn backend.app:app --host 0.0.0.0 --port 8000 --log-level info \
     > /data/backend.log 2>&1 &
 BACKEND_PID=$!
 echo "Backend started (PID: $BACKEND_PID) on port 8000"
 sleep 2
+
+if ! kill -0 "$BACKEND_PID" 2>/dev/null; then
+    echo "ERROR: Web management backend exited during startup."
+    cat /data/backend.log || true
+    exit 1
+fi
+
+for i in $(seq 1 10); do
+    if curl -fsS http://127.0.0.1:8000/api/health >/dev/null 2>&1; then
+        echo "Web management backend is healthy."
+        break
+    fi
+    if [ "$i" = "10" ]; then
+        echo "ERROR: Web management backend did not become healthy."
+        cat /data/backend.log || true
+        exit 1
+    fi
+    sleep 1
+done
 
 # ── 7. Build GOST auth string and start proxy forwarding ────────
 echo "[7/7] Starting GOST proxy forwarding..."
