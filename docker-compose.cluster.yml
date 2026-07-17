@@ -14,6 +14,9 @@ x-warp-node: &warp-node
     - APP_MODE=node
     - PROXY_USER=${PROXY_USER:-}
     - PROXY_PASS=${PROXY_PASS:-}
+    - WEB_USER=${WEB_USER:-admin}
+    - WEB_PASS=${WEB_PASS:-change_this_web_password}
+    - WEB_SESSION_SECRET=${WEB_SESSION_SECRET:-change_this_session_secret}
     - REFRESH_INTERVAL=${REFRESH_INTERVAL:-30}
   expose:
     - "1080"
@@ -60,6 +63,9 @@ services:
       - CLUSTER_NODES=warp-1=http://warp-1:8000,warp-2=http://warp-2:8000,warp-3=http://warp-3:8000
       - SOCKS_TARGETS=warp-1=warp-1:1080,warp-2=warp-2:1080,warp-3=warp-3:1080
       - HTTP_TARGETS=warp-1=warp-1:8080,warp-2=warp-2:8080,warp-3=warp-3:8080
+      - WEB_USER=${WEB_USER:-admin}
+      - WEB_PASS=${WEB_PASS:-change_this_web_password}
+      - WEB_SESSION_SECRET=${WEB_SESSION_SECRET:-change_this_session_secret}
     ports:
       - "127.0.0.1:1080:1080" # unified SOCKS5 proxy
       - "127.0.0.1:8080:8080" # unified HTTP proxy

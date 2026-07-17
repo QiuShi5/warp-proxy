@@ -138,6 +138,7 @@
   .btn.red { color: #ffc4c4; background: rgba(239, 91, 91, .15); border-color: rgba(239, 91, 91, .44); box-shadow: none; }
   .profile { display: flex; align-items: center; gap: 10px; padding-left: 10px; border-left: 1px solid var(--line); color: #dbeafe; }
   .avatar { width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, #2563eb, #22c55e); }
+  .profile .btn { min-height: 30px; padding: 0 9px; }
   .cards { display: grid; grid-template-columns: repeat(5, minmax(150px, 1fr)); gap: 14px; margin-bottom: 16px; }
   .metric {
     min-height: 118px;
@@ -331,7 +332,7 @@
         </div>
         <button id="refreshBtn" class="btn">刷新</button>
         <button id="rotateAllBtn" class="btn amber">批量轮换</button>
-        <div class="profile"><span class="avatar"></span><strong>admin</strong></div>
+        <div class="profile"><span class="avatar"></span><strong id="profileUser">admin</strong><button id="logoutBtn" class="btn secondary">退出</button></div>
       </div>
     </header>
 
@@ -478,13 +479,38 @@ function showToast(message, type = 'info') {
 }
 
 async function apiJson(url, options = {}) {
-  const request = { ...options, headers: { 'Content-Type': 'application/json', ...(options.headers || {}) } };
+  const request = { ...options, credentials: 'same-origin', headers: { 'Content-Type': 'application/json', ...(options.headers || {}) } };
   if (request.body && typeof request.body !== 'string') {
     request.body = JSON.stringify(request.body);
   }
   const res = await fetch(url, request);
+  if (res.status === 401) {
+    window.location.href = '/login';
+    throw new Error('请先登录');
+  }
   if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
   return res.json();
+}
+
+async function loadAuthProfile() {
+  try {
+    const me = await apiJson('/api/auth/me');
+    if (!me.authenticated) {
+      window.location.href = '/login';
+      return;
+    }
+    byId('profileUser').textContent = me.username || 'admin';
+  } catch (error) {
+    window.location.href = '/login';
+  }
+}
+
+async function logout() {
+  try {
+    await apiJson('/api/auth/logout', { method: 'POST' });
+  } finally {
+    window.location.href = '/login';
+  }
 }
 
 function nodeUrl(nodeId, path) {
@@ -898,6 +924,7 @@ byId('activityRefreshBtn').addEventListener('click', refreshAll);
 byId('rotateAllBtn').addEventListener('click', () => clusterAction('/api/cluster/rotate', '批量轮换'));
 byId('licensesRefreshBtn').addEventListener('click', refreshAll);
 byId('licensesGenerateBtn').addEventListener('click', () => selectedNodeId ? nodeAction(selectedNodeId, 'licenses/generate') : clusterAction('/api/cluster/licenses/generate', '批量生成 License'));
+byId('logoutBtn').addEventListener('click', logout);
 byId('settingsReadBtn').addEventListener('click', () => selectedNodeId && loadNodeSettings(selectedNodeId));
 byId('settingsSaveBtn').addEventListener('click', saveNodeSettings);
 byId('logsRefreshBtn').addEventListener('click', () => selectedNodeId && loadNodeLogs(selectedNodeId));
@@ -928,6 +955,7 @@ setInterval(() => {
   }
 }, 1000);
 
+loadAuthProfile();
 refreshAll();
 </script>
 </body>
