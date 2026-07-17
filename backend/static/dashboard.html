@@ -234,6 +234,10 @@
   .license-top { display: flex; justify-content: space-between; gap: 10px; align-items: start; }
   .license-id { font-weight: 850; margin-bottom: 7px; overflow-wrap: anywhere; }
   .license-row { display: flex; justify-content: space-between; gap: 12px; color: var(--muted); font-size: 13px; margin-top: 7px; }
+  .license-actions { display: grid; gap: 8px; margin-top: 12px; }
+  .license-action-line { display: flex; align-items: end; gap: 8px; flex-wrap: wrap; }
+  .license-action-line label { flex: 1 1 150px; }
+  .license-action-line select { min-width: 0; width: 100%; }
   .bar { height: 4px; margin: 11px 0; background: rgba(148, 163, 184, .22); border-radius: 999px; overflow: hidden; }
   .bar span { display: block; height: 100%; background: linear-gradient(90deg, var(--blue), var(--green)); border-radius: inherit; }
   .balance-list, .activity-list, .settings-form, .log-box { padding: 12px 15px 15px; }
@@ -587,6 +591,13 @@ function groupedBalancerTargets(balancers) {
   return Array.from(groups.values());
 }
 
+function renderNodeOptions(nodes, selectedId) {
+  return (nodes || []).map(node => {
+    const selected = node.id === selectedId ? ' selected' : '';
+    return `<option value="${escapeAttr(node.id)}"${selected}>${escapeHtml(node.id)}</option>`;
+  }).join('');
+}
+
 function allLicenses(nodes) {
   return (nodes || []).flatMap(node => (node.licenses || []).map(license => ({ ...license, node_id: node.id })));
 }
@@ -630,7 +641,7 @@ function render(data) {
 
   recordTraffic(totalBytes);
   renderNodes(nodes);
-  renderLicenses(nodes.find(node => node.id === selectedNodeId) || nodes[0]);
+  renderLicenses(nodes.find(node => node.id === selectedNodeId) || nodes[0], nodes);
   renderBalancers(data.balancers || {});
   renderActivities(nodes, targets);
   drawTrafficChart();
@@ -682,7 +693,7 @@ function renderNodes(nodes) {
   }).join('');
 }
 
-function renderLicenses(node) {
+function renderLicenses(node, nodes) {
   const grid = byId('licenseGrid');
   if (!node) {
     grid.innerHTML = '<div class="empty">没有节点数据</div>';
@@ -700,6 +711,7 @@ function renderLicenses(node) {
     const percent = Math.max(12, Math.min(95, active ? 70 : 30 + index * 8));
     const nodeId = escapeAttr(node.id);
     const licenseId = escapeAttr(license.id);
+    const nodeOptions = renderNodeOptions(nodes, node.id);
     return `<article class="license-card">
       <div class="license-top">
         <div><div class="license-id">${escapeHtml(license.label || shortId(license.id))}</div><code>${escapeHtml(shortId(license.id))}</code></div>
@@ -709,9 +721,14 @@ function renderLicenses(node) {
       <div class="license-row"><span>初始 IP</span><code>${escapeHtml(license.initial_ip || '-')}</code></div>
       <div class="license-row"><span>创建时间</span><span>${escapeHtml(String(license.created_at || '-').slice(0, 10))}</span></div>
       <div class="bar"><span style="width:${percent}%"></span></div>
-      <div class="actions" style="justify-content:flex-start">
-        ${active ? '' : `<button class="btn secondary" data-node-id="${nodeId}" data-license-id="${licenseId}" data-license-action="activate">切换</button>`}
-        ${active ? '' : `<button class="btn red" data-node-id="${nodeId}" data-license-id="${licenseId}" data-license-action="delete">删除</button>`}
+      <div class="license-actions">
+        ${active ? '' : `<div class="license-action-line">
+          <label>切换到节点<select data-license-target-node="${licenseId}">${nodeOptions}</select></label>
+          <button class="btn secondary" data-node-id="${nodeId}" data-license-id="${licenseId}" data-license-action="activate">切换</button>
+        </div>`}
+        ${active ? '' : `<div class="actions" style="justify-content:flex-start">
+          <button class="btn red" data-node-id="${nodeId}" data-license-id="${licenseId}" data-license-action="delete">删除</button>
+        </div>`}
       </div>
     </article>`;
   }).join('');
@@ -879,7 +896,8 @@ async function clusterAction(url, label) {
 async function activateLicense(nodeId, licenseId) {
   try {
     await apiJson(nodeUrl(nodeId, `/licenses/${encodeURIComponent(licenseId)}/activate`), { method: 'POST' });
-    showToast('License 已切换', 'success');
+    selectedNodeId = nodeId;
+    showToast(`License 已切换到 ${nodeId}`, 'success');
     await refreshAll();
   } catch (error) {
     showToast(`切换失败: ${error.message}`, 'error');
@@ -964,7 +982,12 @@ document.addEventListener('click', event => {
   const licenseButton = event.target.closest('[data-license-action]');
   if (licenseButton) {
     const action = licenseButton.dataset.licenseAction;
-    if (action === 'activate') activateLicense(licenseButton.dataset.nodeId, licenseButton.dataset.licenseId);
+    if (action === 'activate') {
+      const card = licenseButton.closest('.license-card');
+      const targetSelect = card?.querySelector('[data-license-target-node]');
+      const targetNodeId = targetSelect?.value || licenseButton.dataset.nodeId;
+      activateLicense(targetNodeId, licenseButton.dataset.licenseId);
+    }
     if (action === 'delete') deleteLicense(licenseButton.dataset.nodeId, licenseButton.dataset.licenseId);
   }
 });

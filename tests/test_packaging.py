@@ -85,6 +85,15 @@ class PackagingTests(unittest.TestCase):
         self.assertNotIn("generateAllBtn", dashboard)
         self.assertIn("licensesGenerateBtn", dashboard)
 
+    def test_dashboard_license_switch_uses_target_node_picker(self):
+        dashboard = read_text("backend/static/dashboard.html")
+
+        self.assertIn("function renderNodeOptions", dashboard)
+        self.assertIn("切换到节点<select data-license-target-node", dashboard)
+        self.assertIn("const targetSelect = card?.querySelector('[data-license-target-node]');", dashboard)
+        self.assertIn("activateLicense(targetNodeId, licenseButton.dataset.licenseId);", dashboard)
+        self.assertNotIn("activateLicense(licenseButton.dataset.nodeId, licenseButton.dataset.licenseId)", dashboard)
+
     def test_dashboard_groups_balancer_targets_by_node(self):
         dashboard = read_text("backend/static/dashboard.html")
 
