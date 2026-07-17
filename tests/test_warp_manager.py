@@ -30,7 +30,7 @@ class WarpManagerTests(unittest.TestCase):
     def test_json_roundtrip_uses_utf8_and_parent_dirs(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "nested" / "settings.json"
-            data = {"proxy_user": "warp", "note": "??"}
+            data = {"proxy_user": "warp", "note": "中文"}
 
             warp_manager._save_json(path, data)
 
@@ -111,8 +111,10 @@ class WarpManagerTests(unittest.TestCase):
                 warp_manager.LICENSES_DIR = licenses_dir
                 warp_manager.LICENSES_INDEX = licenses_dir / "index.json"
                 warp_manager.CURRENT_LICENSE_FILE = data_root / "current_license_id"
+                commands = []
 
                 def fake_run_cmd(cmd, timeout=30, check=False):
+                    commands.append(tuple(cmd))
                     if cmd[-2:] == ["registration", "new"]:
                         (warp_root / "new-registration").write_text("new", encoding="utf-8")
                     return self._cmd_result()
@@ -139,6 +141,10 @@ class WarpManagerTests(unittest.TestCase):
                 self.assertEqual(len(licenses), 1)
                 self.assertFalse(licenses[0]["is_current"])
                 self.assertEqual(licenses[0]["status"], "available")
+                self.assertNotIn(
+                    ("warp-cli", "--accept-tos", "registration", "delete"),
+                    commands,
+                )
         finally:
             (
                 warp_manager.WARP_DATA_DIR,
@@ -179,8 +185,10 @@ class WarpManagerTests(unittest.TestCase):
                         "licenses": [{"id": "old-license", "seq": 1, "status": "active"}],
                     }
                 )
+                commands = []
 
                 def fake_run_cmd(cmd, timeout=30, check=False):
+                    commands.append(tuple(cmd))
                     if cmd[-2:] == ["registration", "new"]:
                         (warp_root / "new-registration").write_text("new", encoding="utf-8")
                     return self._cmd_result()
@@ -208,6 +216,73 @@ class WarpManagerTests(unittest.TestCase):
                 self.assertEqual([lic["id"] for lic in licenses], ["new-license"])
                 self.assertTrue(licenses[0]["is_current"])
                 self.assertEqual(licenses[0]["status"], "active")
+                self.assertNotIn(
+                    ("warp-cli", "--accept-tos", "registration", "delete"),
+                    commands,
+                )
+        finally:
+            (
+                warp_manager.WARP_DATA_DIR,
+                warp_manager.DATA_DIR,
+                warp_manager.LICENSES_DIR,
+                warp_manager.LICENSES_INDEX,
+                warp_manager.CURRENT_LICENSE_FILE,
+            ) = old_paths
+
+    def test_switch_to_license_does_not_delete_saved_registration(self):
+        old_paths = (
+            warp_manager.WARP_DATA_DIR,
+            warp_manager.DATA_DIR,
+            warp_manager.LICENSES_DIR,
+            warp_manager.LICENSES_INDEX,
+            warp_manager.CURRENT_LICENSE_FILE,
+        )
+        try:
+            with tempfile.TemporaryDirectory() as tmp:
+                tmp_path = Path(tmp)
+                warp_root = tmp_path / "warp-data"
+                data_root = tmp_path / "data"
+                licenses_dir = data_root / "licenses"
+                license_dir = licenses_dir / "license-1" / "registration"
+                warp_root.mkdir(parents=True)
+                license_dir.mkdir(parents=True)
+                (warp_root / "old-registration").write_text("old", encoding="utf-8")
+                (license_dir / "registration").write_text("saved", encoding="utf-8")
+                warp_manager.WARP_DATA_DIR = warp_root
+                warp_manager.DATA_DIR = data_root
+                warp_manager.LICENSES_DIR = licenses_dir
+                warp_manager.LICENSES_INDEX = licenses_dir / "index.json"
+                warp_manager.CURRENT_LICENSE_FILE = data_root / "current_license_id"
+                warp_manager.save_license_index(
+                    {
+                        "last_id": 1,
+                        "licenses": [{"id": "license-1", "seq": 1, "status": "available"}],
+                    }
+                )
+                commands = []
+
+                def fake_run_cmd(cmd, timeout=30, check=False):
+                    commands.append(tuple(cmd))
+                    return self._cmd_result()
+
+                with patch.object(warp_manager, "_run_cmd", side_effect=fake_run_cmd), patch.object(
+                    warp_manager, "_get_warp_status", return_value="connected"
+                ), patch.object(warp_manager, "_check_external_ip", return_value="203.0.113.30"), patch.object(
+                    warp_manager, "_stop_warp_svc"
+                ), patch.object(
+                    warp_manager, "_start_warp_svc"
+                ), patch.object(
+                    warp_manager.time, "sleep"
+                ):
+                    result = warp_manager.switch_to_license("license-1")
+
+                self.assertTrue(result["connected"])
+                self.assertEqual(warp_manager.get_current_license_id(), "license-1")
+                self.assertEqual((warp_root / "registration").read_text(encoding="utf-8"), "saved")
+                self.assertNotIn(
+                    ("warp-cli", "--accept-tos", "registration", "delete"),
+                    commands,
+                )
         finally:
             (
                 warp_manager.WARP_DATA_DIR,
