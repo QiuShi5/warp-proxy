@@ -24,7 +24,7 @@ from typing import Optional, List
 
 logger = logging.getLogger(__name__)
 
-# ?? Paths ????????????????????????????????????????????????????????????
+# ── Paths ────────────────────────────────────────────────────────────
 WARP_DATA_DIR = Path("/var/lib/cloudflare-warp")
 DATA_DIR = Path("/data")
 LICENSES_DIR = DATA_DIR / "licenses"
@@ -32,7 +32,7 @@ LICENSES_INDEX = LICENSES_DIR / "index.json"
 SETTINGS_FILE = DATA_DIR / "settings.json"
 CURRENT_LICENSE_FILE = DATA_DIR / "current_license_id"
 
-# ?? Default configuration ???????????????????????????????????????????
+# ── Default configuration ───────────────────────────────────────────
 DEFAULT_SETTINGS = {
     "refresh_interval_minutes": 0,   # 0 = disabled
     "auto_rotate": False,
@@ -45,7 +45,7 @@ WARP_SOCKS5_ADDR = "127.0.0.1:40000"
 WARP_OPERATION_LOCK = threading.RLock()
 
 
-# ?? Helpers ??????????????????????????????????????????????????????????
+# ── Helpers ──────────────────────────────────────────────────────────
 
 def _run_cmd(cmd: list, timeout: int = 30, check: bool = False) -> subprocess.CompletedProcess:
     """Run a shell command and return the CompletedProcess."""
@@ -171,7 +171,7 @@ def _is_warp_svc_running() -> bool:
         return False
 
 
-# ?? License Pool Management ??????????????????????????????????????????
+# ── License Pool Management ──────────────────────────────────────────
 
 def load_license_index() -> dict:
     """Load the license pool index."""
@@ -246,16 +246,13 @@ def generate_license(bind: bool = False) -> dict:
         logger.info("Backed up current WARP data temporarily")
 
     try:
-        # 2. Disconnect and delete old registration
+        # 2. Disconnect and stop before replacing local registration data.
         _run_cmd(["warp-cli", "--accept-tos", "disconnect"], timeout=10)
         time.sleep(2)
-        _run_cmd(["warp-cli", "--accept-tos", "registration", "delete"], timeout=10)
-        time.sleep(2)
 
-        # Stop warp-svc so we can clean the data dir cleanly
         _stop_warp_svc()
 
-        # Remove old registration data
+        # Remove local registration data without unregistering the saved account.
         _clear_directory_contents(WARP_DATA_DIR)
 
         # 3. Start warp-svc and create new registration
@@ -398,30 +395,27 @@ def switch_to_license(license_id: str, restore_mode: bool = False) -> dict:
     if not license_dir.exists():
         raise FileNotFoundError(f"License data not found for [{license_id}]")
 
-    # 1. Disconnect
+    # 1. Disconnect the currently running local client.
     _run_cmd(["warp-cli", "--accept-tos", "disconnect"], timeout=10)
     time.sleep(2)
 
-    # 2. Delete registration
-    _run_cmd(["warp-cli", "--accept-tos", "registration", "delete"], timeout=10)
-    time.sleep(1)
-
-    # 3. Stop warp-svc
+    # 2. Stop warp-svc before replacing local registration files.
     _stop_warp_svc()
 
-    # 4. Replace data directory
+    # 3. Replace local registration data. Do not run "registration delete" here:
+    # it unregisters the account that the saved license data may still need.
     _clear_directory_contents(WARP_DATA_DIR)
     _copy_directory_contents(license_dir, WARP_DATA_DIR)
 
-    # 5. Start warp-svc
+    # 4. Start warp-svc
     _start_warp_svc()
 
-    # 6. Set mode and connect
+    # 5. Set mode and connect
     _run_cmd(["warp-cli", "--accept-tos", "mode", "proxy"], timeout=10)
     _run_cmd(["warp-cli", "--accept-tos", "connect"], timeout=15)
     time.sleep(5)
 
-    # Poll for connection
+    # 6. Poll for connection
     connected = False
     for _ in range(15):
         status = _get_warp_status()
@@ -499,7 +493,7 @@ def get_license_detail(license_id: str) -> Optional[dict]:
     return _license_for_response(meta, current_id)
 
 
-# ?? WARP Connection Management ??????????????????????????????????????
+# ── WARP Connection Management ──────────────────────────────────────
 
 def get_status() -> dict:
     """Get comprehensive current status of the WARP proxy."""
@@ -577,7 +571,7 @@ def rotate_license() -> dict:
     return result
 
 
-# ?? Settings ?????????????????????????????????????????????????????????
+# ── Settings ─────────────────────────────────────────────────────────
 
 def get_settings() -> dict:
     """Get current settings."""
@@ -596,7 +590,7 @@ def update_settings(new_settings: dict) -> dict:
     return current
 
 
-# ?? Background Tasks ????????????????????????????????????????????????
+# ── Background Tasks ────────────────────────────────────────────────
 
 class HealthCheckLoop:
     """Background thread for periodic health checks and auto-recovery."""

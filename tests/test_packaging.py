@@ -56,6 +56,13 @@ class PackagingTests(unittest.TestCase):
         self.assertIn("const active = Boolean(license.is_current);", dashboard)
         self.assertNotIn("license.is_current || license.status === 'active'", dashboard)
 
+    def test_dashboard_text_is_not_mojibake(self):
+        dashboard = read_text("backend/static/dashboard.html")
+
+        for text in ("总览", "节点管理", "License 管理", "负载均衡", "节点设置", "日志"):
+            self.assertIn(text, dashboard)
+        self.assertNotIn("?" * 4, dashboard)
+
     def test_dashboard_keeps_license_generation_out_of_node_management(self):
         dashboard = read_text("backend/static/dashboard.html")
 
