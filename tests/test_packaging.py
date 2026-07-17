@@ -59,7 +59,7 @@ class PackagingTests(unittest.TestCase):
     def test_dashboard_text_is_not_mojibake(self):
         dashboard = read_text("backend/static/dashboard.html")
 
-        for text in ("总览", "节点管理", "License 管理", "负载均衡", "节点设置", "日志"):
+        for text in ("warp-proxy 管理面板", "总览", "节点管理", "License 管理", "负载均衡", "节点设置", "日志"):
             self.assertIn(text, dashboard)
         self.assertNotIn("?" * 4, dashboard)
 
