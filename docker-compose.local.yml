@@ -2,7 +2,8 @@ version: "3.8"
 
 services:
   warp-proxy:
-    image: ${WARP_PROXY_IMAGE:-ghcr.io/qiushi5/warp-proxy:latest}
+    build: .
+    image: warp-proxy:local
     container_name: warp-proxy
     restart: unless-stopped
     init: true
@@ -18,9 +19,9 @@ services:
       - PROXY_PASS=${PROXY_PASS:-}
       - REFRESH_INTERVAL=${REFRESH_INTERVAL:-30}
     ports:
-      - "127.0.0.1:1081:1080" # SOCKS5 proxy, same default as upstream
-      - "127.0.0.1:1082:8080" # HTTP proxy, same default as upstream
-      - "127.0.0.1:8000:8000" # Web management panel
+      - "127.0.0.1:1081:1080"
+      - "127.0.0.1:1082:8080"
+      - "127.0.0.1:8000:8000"
     volumes:
       - ./warp-data:/var/lib/cloudflare-warp
       - ./warp-app-data:/data

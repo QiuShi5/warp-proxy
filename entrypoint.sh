@@ -1,35 +1,70 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
-# 启动 dbus (warp-cli 与后台服务通信依赖此组件)
+# ═══════════════════════════════════════════════════════════════════
+# warp-proxy — Enhanced WARP Proxy with License Pool Manager
+# ═══════════════════════════════════════════════════════════════════
+
+echo "=== warp-proxy starting ==="
+
+APP_MODE="${APP_MODE:-node}"
+
+if [ "$APP_MODE" = "manager" ]; then
+    echo "Starting in manager mode..."
+    cd /app
+    exec python -m uvicorn backend.cluster_app:app --host 0.0.0.0 --port 8000 --log-level info
+fi
+
+if [ "$APP_MODE" != "node" ]; then
+    echo "ERROR: Unsupported APP_MODE: $APP_MODE"
+    exit 1
+fi
+
+# ── 1. Start dbus (required by warp-svc for D-Bus IPC) ─────────
+echo "[1/7] Starting dbus..."
 /etc/init.d/dbus start
-sleep 1
+sleep 2
 
-# 后台启动 warp 核心服务
+# ── 2. Start WARP service ───────────────────────────────────────
+echo "[2/7] Starting warp-svc..."
 warp-svc &
-sleep 3
+WARP_SVC_PID=$!
+sleep 4
 
-# 尝试注册一个全新 WARP 匿名账户 (如果曾经挂载注册过会报错，使用 || true 让其忽略继续往下走)
-warp-cli --accept-tos registration new || true
+# ── 3. Initial WARP registration ────────────────────────────────
+echo "[3/7] Initial WARP registration..."
+# Ignore error if already registered (e.g., volume restored)
+warp-cli --accept-tos registration new 2>/dev/null || true
 
-# 设置为 Proxy 代理模式 (默认内部端口为 40000，且不会改变服务器本机的路由环境)
-warp-cli --accept-tos mode proxy
+# Set proxy mode (SOCKS5 on 127.0.0.1:40000)
+if ! warp-cli --accept-tos mode proxy; then
+    echo "WARNING: Failed to set WARP proxy mode; continuing so the web UI can recover."
+fi
 
-# 连接 WARP 主网
-warp-cli --accept-tos connect
+# ── 4. Connect to WARP network ──────────────────────────────────
+echo "[4/7] Connecting to WARP..."
+if ! warp-cli --accept-tos connect; then
+    echo "WARNING: Initial WARP connect failed; continuing so the web UI can recover."
+fi
 
 echo "Waiting for WARP to connect..."
-sleep 5
+for i in $(seq 1 15); do
+    STATUS=$(warp-cli --accept-tos status 2>/dev/null || echo "waiting")
+    STATUS_LOWER=$(printf "%s" "$STATUS" | tr '[:upper:]' '[:lower:]')
+    if echo "$STATUS_LOWER" | grep -q "connected" && ! echo "$STATUS_LOWER" | grep -q "disconnected"; then
+        echo "WARP connected successfully!"
+        break
+    fi
+    sleep 2
+done
 
-# ================= 新增：自动刷新 WARP IP 逻辑 =================
-# 判断 REFRESH_INTERVAL 是否为正整数（非0）
-if [[ "$REFRESH_INTERVAL" =~ ^[1-9][0-9]*$ ]]; then
+# ── 5. Optional original-style WARP reconnect refresh ───────────
+if [[ "${REFRESH_INTERVAL:-}" =~ ^[1-9][0-9]*$ ]]; then
     echo "WARP IP refresh enabled, interval: ${REFRESH_INTERVAL} minutes."
-    # 开启一个后台子进程进行循环刷新
     (
         while true; do
             sleep $(( REFRESH_INTERVAL * 60 ))
-            echo "$(date '+%Y-%m-%d %H:%M:%S') - Refreshing WARP connection to get a new IP..."
+            echo "$(date '+%Y-%m-%d %H:%M:%S') - Refreshing WARP connection..."
             warp-cli --accept-tos disconnect || true
             sleep 3
             warp-cli --accept-tos connect || true
@@ -38,18 +73,37 @@ if [[ "$REFRESH_INTERVAL" =~ ^[1-9][0-9]*$ ]]; then
 else
     echo "WARP IP refresh disabled (REFRESH_INTERVAL is 0 or not set)."
 fi
-# ===============================================================
 
-# 构造 GOST 所需的鉴权字符串
+# Check initial IP
+CURRENT_IP=$(curl --socks5 127.0.0.1:40000 --max-time 8 -s https://ifconfig.me 2>/dev/null || echo "unknown")
+echo "Initial WARP IP: $CURRENT_IP"
+
+# ── 6. Start Python backend (web UI + WARP manager) ────────────
+echo "[6/7] Starting web management backend..."
+cd /app
+nohup python -m uvicorn backend.app:app --host 0.0.0.0 --port 8000 --log-level info \
+    > /data/backend.log 2>&1 &
+BACKEND_PID=$!
+echo "Backend started (PID: $BACKEND_PID) on port 8000"
+sleep 2
+
+# ── 7. Build GOST auth string and start proxy forwarding ────────
+echo "[7/7] Starting GOST proxy forwarding..."
+
 AUTH_STRING=""
-if [ -n "$PROXY_USER" ] && [ -n "$PROXY_PASS" ]; then
+if [ -n "${PROXY_USER:-}" ] && [ -n "${PROXY_PASS:-}" ]; then
     AUTH_STRING="${PROXY_USER}:${PROXY_PASS}@"
-    echo "Proxy credentials loaded -> user: $PROXY_USER"
+    echo "Proxy credentials configured for user: $PROXY_USER"
 else
-    echo "WARNING: NO PROXY CREDENTIALS SET. THIS IS DANGEROUS."
+    echo "WARNING: No proxy credentials set. Access is open (use only in trusted networks)."
 fi
 
-echo "Starting GOST forwarding SOCKS5 & HTTP to internal WARP..."
+echo "=== warp-proxy ready ==="
+echo "  Web UI:  http://0.0.0.0:8000"
+echo "  SOCKS5:  :1080"
+echo "  HTTP:    :8080"
+echo "  WARP IP: $CURRENT_IP"
+echo "================================="
 
-# 启动 Gost 开启外部监听并将流量转发给内部的 WARP(127.0.0.1:40000)
-exec gost -L http://${AUTH_STRING}:8080 -L socks5://${AUTH_STRING}:1080 -F socks5://127.0.0.1:40000
+# Start GOST in foreground (keeps container alive)
+exec gost -L "http://${AUTH_STRING}:8080" -L "socks5://${AUTH_STRING}:1080" -F "socks5://127.0.0.1:40000"
