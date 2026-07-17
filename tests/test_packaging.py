@@ -85,6 +85,15 @@ class PackagingTests(unittest.TestCase):
         self.assertNotIn("generateAllBtn", dashboard)
         self.assertIn("licensesGenerateBtn", dashboard)
 
+    def test_dashboard_groups_balancer_targets_by_node(self):
+        dashboard = read_text("backend/static/dashboard.html")
+
+        self.assertIn("function groupedBalancerTargets", dashboard)
+        self.assertIn("balance-node-head", dashboard)
+        self.assertIn("balance-methods", dashboard)
+        self.assertIn("group.methods.map", dashboard)
+        self.assertNotIn("list.innerHTML = targets.map(target", dashboard)
+
     def test_dashboard_handles_management_auth_session(self):
         dashboard = read_text("backend/static/dashboard.html")
 
