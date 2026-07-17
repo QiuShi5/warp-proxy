@@ -5,6 +5,7 @@ Provides REST API for WARP proxy management web UI.
 """
 
 import logging
+import os
 import threading
 from pathlib import Path
 from contextlib import asynccontextmanager
@@ -13,7 +14,7 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import Any, Dict, Optional
 
 from .warp_manager import (
     get_status,
@@ -39,6 +40,8 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 STATIC_DIR = Path(__file__).parent / "static"
+DASHBOARD_HTML = STATIC_DIR / "dashboard.html"
+SINGLE_NODE_ID = os.getenv("WARP_NODE_ID", os.getenv("NODE_ID", "warp-node-1"))
 
 
 # ── Log capture (in-memory ring buffer) ─────────────────────────────
@@ -95,9 +98,8 @@ if STATIC_DIR.exists():
 @app.get("/", response_class=HTMLResponse)
 async def index():
     """Serve the web management UI."""
-    index_path = STATIC_DIR / "index.html"
-    if index_path.exists():
-        return HTMLResponse(content=index_path.read_text(encoding="utf-8"))
+    if DASHBOARD_HTML.exists():
+        return HTMLResponse(content=DASHBOARD_HTML.read_text(encoding="utf-8"))
     return HTMLResponse("<h1>warp-proxy</h1><p>Frontend not found.</p>")
 
 
@@ -113,6 +115,103 @@ async def api_status():
         return {"warp_status": "error", "error": str(e)}
 
 
+def _proxy_snapshot(name: str, port: int, connected: bool) -> Dict[str, Any]:
+    return {
+        "name": name,
+        "bind_host": "0.0.0.0",
+        "bind_port": port,
+        "running": True,
+        "targets": [
+            {
+                "label": SINGLE_NODE_ID,
+                "host": "127.0.0.1",
+                "port": port,
+                "healthy": connected,
+                "total_connections": 0,
+                "failed_connections": 0,
+                "bytes_from_clients": 0,
+                "bytes_from_targets": 0,
+                "total_bytes": 0,
+                "last_error": None,
+                "last_checked_at": None,
+            }
+        ],
+    }
+
+
+def _single_node_dashboard() -> Dict[str, Any]:
+    status = get_status()
+    licenses = list_licenses()
+    connected = status.get("warp_status") == "connected"
+    node = {
+        "id": SINGLE_NODE_ID,
+        "base_url": "local",
+        "reachable": True,
+        "status": status,
+        "licenses": licenses,
+        "license_count": len(licenses),
+        "error": None,
+    }
+    return {
+        "summary": {
+            "total_nodes": 1,
+            "reachable_nodes": 1,
+            "connected_nodes": 1 if connected else 0,
+            "total_licenses": len(licenses),
+        },
+        "nodes": [node],
+        "balancers": {
+            "socks5": _proxy_snapshot("socks5", 1080, connected),
+            "http": _proxy_snapshot("http", 8080, connected),
+        },
+    }
+
+
+def _require_single_node(node_id: str) -> None:
+    if node_id != SINGLE_NODE_ID:
+        raise HTTPException(404, f"Node [{node_id}] not found")
+
+
+def _node_result(data: Dict[str, Any]) -> Dict[str, Any]:
+    return {
+        "results": [
+            {
+                "ok": True,
+                "node_id": SINGLE_NODE_ID,
+                "status_code": 200,
+                "data": data,
+            }
+        ]
+    }
+
+
+@app.get("/api/dashboard")
+async def api_dashboard():
+    """Return the shared dashboard payload."""
+    try:
+        return _single_node_dashboard()
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+
+@app.post("/api/cluster/rotate")
+async def api_cluster_rotate():
+    """Single-node compatibility endpoint for the shared dashboard."""
+    try:
+        return _node_result(rotate_license())
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+
+@app.post("/api/cluster/licenses/generate")
+async def api_cluster_generate_license():
+    """Single-node compatibility endpoint for the shared dashboard."""
+    try:
+        return _node_result(generate_license())
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+
 @app.post("/api/connect")
 async def api_connect():
     """Connect to WARP."""
@@ -120,6 +219,42 @@ async def api_connect():
         return connect_warp()
     except Exception as e:
         raise HTTPException(500, str(e))
+
+
+@app.get("/api/nodes/{node_id}/status")
+async def api_node_status(node_id: str):
+    _require_single_node(node_id)
+    return await api_status()
+
+
+@app.get("/api/nodes/{node_id}/licenses")
+async def api_node_licenses(node_id: str):
+    _require_single_node(node_id)
+    return await api_list_licenses()
+
+
+@app.post("/api/nodes/{node_id}/licenses/generate")
+async def api_node_generate_license(node_id: str):
+    _require_single_node(node_id)
+    return await api_generate_license()
+
+
+@app.post("/api/nodes/{node_id}/connect")
+async def api_node_connect(node_id: str):
+    _require_single_node(node_id)
+    return await api_connect()
+
+
+@app.post("/api/nodes/{node_id}/disconnect")
+async def api_node_disconnect(node_id: str):
+    _require_single_node(node_id)
+    return await api_disconnect()
+
+
+@app.post("/api/nodes/{node_id}/rotate")
+async def api_node_rotate(node_id: str):
+    _require_single_node(node_id)
+    return await api_rotate()
 
 
 @app.post("/api/disconnect")
@@ -192,6 +327,18 @@ async def api_delete_license(license_id: str):
         raise HTTPException(500, str(e))
 
 
+@app.post("/api/nodes/{node_id}/licenses/{license_id}/activate")
+async def api_node_activate_license(node_id: str, license_id: str):
+    _require_single_node(node_id)
+    return await api_activate_license(license_id)
+
+
+@app.delete("/api/nodes/{node_id}/licenses/{license_id}")
+async def api_node_delete_license(node_id: str, license_id: str):
+    _require_single_node(node_id)
+    return await api_delete_license(license_id)
+
+
 # ── Settings endpoints ──────────────────────────────────────────────
 
 @app.get("/api/settings")
@@ -219,6 +366,18 @@ async def api_update_settings(settings: SettingsUpdate):
         raise HTTPException(500, str(e))
 
 
+@app.get("/api/nodes/{node_id}/settings")
+async def api_node_settings(node_id: str):
+    _require_single_node(node_id)
+    return await api_get_settings()
+
+
+@app.post("/api/nodes/{node_id}/settings")
+async def api_node_update_settings(node_id: str, settings: SettingsUpdate):
+    _require_single_node(node_id)
+    return await api_update_settings(settings)
+
+
 # ── Logs endpoint ───────────────────────────────────────────────────
 
 @app.get("/api/logs")
@@ -232,6 +391,18 @@ async def api_clear_logs():
     """Clear operation logs."""
     log_buffer.clear()
     return {"success": True}
+
+
+@app.get("/api/nodes/{node_id}/logs")
+async def api_node_logs(node_id: str, tail: int = Query(default=200, ge=1, le=1000)):
+    _require_single_node(node_id)
+    return await api_logs(tail=tail)
+
+
+@app.post("/api/nodes/{node_id}/logs/clear")
+async def api_node_clear_logs(node_id: str):
+    _require_single_node(node_id)
+    return await api_clear_logs()
 
 
 # ── Health ──────────────────────────────────────────────────────────

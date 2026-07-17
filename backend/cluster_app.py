@@ -30,7 +30,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 STATIC_DIR = Path(__file__).parent / "static"
-CLUSTER_HTML = STATIC_DIR / "cluster.html"
+DASHBOARD_HTML = STATIC_DIR / "dashboard.html"
 
 nodes = parse_cluster_nodes()
 cluster_client = ClusterClient(nodes)
@@ -101,8 +101,8 @@ def _cluster_summary(nodes_status: List[Dict[str, Any]]) -> Dict[str, Any]:
 
 @app.get("/", response_class=HTMLResponse)
 async def index():
-    if CLUSTER_HTML.exists():
-        return HTMLResponse(CLUSTER_HTML.read_text(encoding="utf-8"))
+    if DASHBOARD_HTML.exists():
+        return HTMLResponse(DASHBOARD_HTML.read_text(encoding="utf-8"))
     return HTMLResponse("<h1>warp-proxy cluster</h1><p>Frontend not found.</p>")
 
 
@@ -118,8 +118,7 @@ async def api_health():
     }
 
 
-@app.get("/api/cluster/status")
-async def api_cluster_status():
+async def _dashboard_payload():
     node_status = await cluster_client.summaries()
     return {
         "summary": _cluster_summary(node_status),
@@ -129,6 +128,16 @@ async def api_cluster_status():
             "http": http_balancer.snapshot(),
         },
     }
+
+
+@app.get("/api/dashboard")
+async def api_dashboard():
+    return await _dashboard_payload()
+
+
+@app.get("/api/cluster/status")
+async def api_cluster_status():
+    return await _dashboard_payload()
 
 
 @app.post("/api/cluster/rotate")
