@@ -1,0 +1,66 @@
+import re
+import unittest
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def read_text(path: str) -> str:
+    return (ROOT / path).read_text(encoding="utf-8")
+
+
+class PackagingTests(unittest.TestCase):
+    def test_dockerfile_provides_entrypoint_runtime_commands(self):
+        dockerfile = read_text("Dockerfile")
+
+        for package in ("curl", "procps", "dbus", "python3", "python3-pip"):
+            self.assertRegex(dockerfile, rf"\b{re.escape(package)}\b")
+
+        self.assertIn("cloudflare-warp", dockerfile)
+        self.assertIn("/usr/local/bin/gost", dockerfile)
+        self.assertIn("ln -sf /usr/bin/python3 /usr/local/bin/python", dockerfile)
+        self.assertIn("ln -sf /usr/bin/pip3 /usr/local/bin/pip", dockerfile)
+
+    def test_entrypoint_does_not_call_unresolved_python_binary(self):
+        entrypoint = read_text("entrypoint.sh")
+
+        self.assertIn('PYTHON_BIN="${PYTHON_BIN:-}"', entrypoint)
+        self.assertIn('command -v python3', entrypoint)
+        self.assertIn('exec "$PYTHON_BIN" -m uvicorn backend.cluster_app:app', entrypoint)
+        self.assertIn('nohup "$PYTHON_BIN" -m uvicorn backend.app:app', entrypoint)
+        self.assertIsNone(re.search(r"\b(?:exec|nohup)\s+python\s+-m\s+uvicorn", entrypoint))
+
+    def test_entrypoint_fails_before_ready_when_backend_is_unhealthy(self):
+        entrypoint = read_text("entrypoint.sh")
+
+        health_check = entrypoint.index("Web management backend is healthy.")
+        ready_banner = entrypoint.index("=== warp-proxy ready ===")
+        self.assertLess(health_check, ready_banner)
+        self.assertIn("ERROR: Web management backend exited during startup.", entrypoint)
+        self.assertIn("ERROR: Web management backend did not become healthy.", entrypoint)
+        self.assertIn("cat /data/backend.log", entrypoint)
+
+    def test_web_ui_has_single_static_dashboard_source(self):
+        static_dir = ROOT / "backend" / "static"
+
+        self.assertTrue((static_dir / "dashboard.html").is_file())
+        self.assertFalse((static_dir / "index.html").exists())
+        self.assertFalse((static_dir / "cluster.html").exists())
+        self.assertIn('DASHBOARD_HTML = STATIC_DIR / "dashboard.html"', read_text("backend/app.py"))
+        self.assertIn('DASHBOARD_HTML = STATIC_DIR / "dashboard.html"', read_text("backend/cluster_app.py"))
+
+    def test_compose_healthchecks_target_existing_api(self):
+        for compose_file in (
+            "docker-compose.yml",
+            "docker-compose.cluster.yml",
+            "docker-compose.local.yml",
+        ):
+            compose = read_text(compose_file)
+            self.assertIn("http://127.0.0.1:8000/api/health", compose)
+            self.assertNotIn("index.html", compose)
+            self.assertNotIn("cluster.html", compose)
+
+
+if __name__ == "__main__":
+    unittest.main()
