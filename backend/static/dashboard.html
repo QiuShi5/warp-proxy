@@ -1,0 +1,937 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>warp-proxy 管理面板</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #07111d;
+    --bg-soft: #0d1b2b;
+    --panel: rgba(14, 28, 44, .94);
+    --panel-strong: rgba(18, 36, 55, .96);
+    --line: rgba(135, 158, 184, .28);
+    --line-soft: rgba(135, 158, 184, .16);
+    --text: #eef5ff;
+    --muted: #95a8bd;
+    --blue: #2684ff;
+    --green: #31d06d;
+    --amber: #f0a622;
+    --red: #ef5b5b;
+    --cyan: #22c7d8;
+    --shadow: 0 18px 48px rgba(0, 0, 0, .26);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: linear-gradient(145deg, #05101c 0%, #0b1725 58%, #08121f 100%);
+    color: var(--text);
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    letter-spacing: 0;
+  }
+  button, input, select { font: inherit; }
+  button { cursor: pointer; }
+  .app { display: grid; grid-template-columns: 252px minmax(0, 1fr); min-height: 100vh; }
+  .sidebar {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    padding: 24px 14px;
+    background: rgba(5, 15, 28, .86);
+    border-right: 1px solid var(--line);
+  }
+  .brand { display: flex; align-items: center; gap: 12px; padding: 0 10px 24px; font-size: 18px; font-weight: 800; }
+  .brand-mark {
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, var(--blue), var(--cyan) 55%, var(--green));
+    box-shadow: 0 0 22px rgba(34, 199, 216, .24);
+  }
+  .nav { display: grid; gap: 8px; }
+  .nav a {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 44px;
+    padding: 0 12px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    color: #c5d5e8;
+    text-decoration: none;
+  }
+  .nav a:hover, .nav a.active {
+    background: rgba(38, 132, 255, .16);
+    border-color: rgba(38, 132, 255, .4);
+    color: #fff;
+  }
+  .nav-icon {
+    width: 22px;
+    height: 22px;
+    display: inline-grid;
+    place-items: center;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, .06);
+    color: #8cc8ff;
+    font-size: 12px;
+    font-weight: 800;
+  }
+  .side-card {
+    position: absolute;
+    left: 14px;
+    right: 14px;
+    bottom: 22px;
+    padding: 14px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: rgba(13, 27, 43, .9);
+  }
+  .side-card dl { display: grid; gap: 9px; margin: 0; }
+  .side-card div { display: flex; justify-content: space-between; gap: 10px; color: var(--muted); font-size: 13px; }
+  .side-card dd { margin: 0; color: var(--text); text-align: right; }
+  .main { min-width: 0; padding: 24px 26px 30px; }
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    margin-bottom: 18px;
+  }
+  h1 { margin: 0; font-size: 24px; line-height: 1.2; }
+  h2 { margin: 0; font-size: 17px; line-height: 1.2; }
+  .tools { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+  .search {
+    width: min(340px, 36vw);
+    height: 38px;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 0 11px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: rgba(7, 18, 31, .82);
+  }
+  .search input { width: 100%; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--text); }
+  .search kbd { border: 1px solid var(--line); border-radius: 6px; color: var(--muted); font-size: 11px; padding: 2px 6px; white-space: nowrap; }
+  .btn {
+    min-height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border: 1px solid transparent;
+    border-radius: 7px;
+    padding: 0 11px;
+    color: #fff;
+    background: var(--blue);
+    box-shadow: 0 8px 20px rgba(38, 132, 255, .2);
+    font-weight: 750;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+  .btn:hover { filter: brightness(1.08); }
+  .btn:disabled { opacity: .55; cursor: not-allowed; }
+  .btn.secondary { color: #d4e3f6; background: rgba(12, 25, 41, .78); border-color: var(--line); box-shadow: none; }
+  .btn.green { background: #20bd60; color: #03190c; }
+  .btn.amber { background: var(--amber); color: #221400; }
+  .btn.red { color: #ffc4c4; background: rgba(239, 91, 91, .15); border-color: rgba(239, 91, 91, .44); box-shadow: none; }
+  .profile { display: flex; align-items: center; gap: 10px; padding-left: 10px; border-left: 1px solid var(--line); color: #dbeafe; }
+  .avatar { width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, #2563eb, #22c55e); }
+  .cards { display: grid; grid-template-columns: repeat(5, minmax(150px, 1fr)); gap: 14px; margin-bottom: 16px; }
+  .metric {
+    min-height: 118px;
+    padding: 16px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: linear-gradient(145deg, rgba(18, 39, 59, .96), rgba(10, 23, 38, .94));
+    box-shadow: var(--shadow);
+  }
+  .metric-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .metric-icon {
+    width: 42px;
+    height: 42px;
+    display: grid;
+    place-items: center;
+    border-radius: 8px;
+    background: rgba(38, 132, 255, .18);
+    color: #8bc8ff;
+    font-size: 16px;
+    font-weight: 900;
+  }
+  .metric.green .metric-icon { background: rgba(49, 208, 109, .16); color: #8df0ac; }
+  .metric.cyan .metric-icon { background: rgba(34, 199, 216, .16); color: #8df2fb; }
+  .metric.amber .metric-icon { background: rgba(240, 166, 34, .16); color: #ffd58a; }
+  .metric-label { color: var(--muted); font-size: 13px; font-weight: 750; }
+  .metric-value { margin-top: 9px; font-size: 26px; font-weight: 850; overflow-wrap: anywhere; }
+  .metric-sub { color: var(--muted); font-size: 13px; margin-top: 5px; overflow-wrap: anywhere; }
+  .metric-sub strong { color: var(--green); }
+  .layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(360px, 500px); gap: 16px; align-items: start; }
+  .stack, .side-grid { display: grid; gap: 16px; }
+  .panel {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--panel);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  .panel-head {
+    min-height: 54px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 13px 15px;
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .panel-title { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .count { min-width: 24px; height: 22px; display: inline-grid; place-items: center; border-radius: 6px; background: rgba(148, 163, 184, .16); color: #dde9f8; font-size: 12px; }
+  .panel-tools { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+  .field, select {
+    height: 34px;
+    min-width: 138px;
+    padding: 0 10px;
+    color: var(--text);
+    background: rgba(6, 17, 30, .82);
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    outline: 0;
+  }
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { padding: 11px 14px; border-bottom: 1px solid var(--line-soft); text-align: left; vertical-align: middle; }
+  th { color: #a7b8cb; font-weight: 750; background: rgba(7, 18, 31, .38); }
+  tbody tr:hover td { background: rgba(38, 132, 255, .05); }
+  code { color: #dbeafe; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; overflow-wrap: anywhere; }
+  .node-name { font-weight: 850; color: #f8fbff; }
+  .subtle { color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+  .status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 23px;
+    border-radius: 999px;
+    padding: 2px 8px;
+    font-size: 12px;
+    font-weight: 850;
+    white-space: nowrap;
+  }
+  .status::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+  .status.ok { color: #7cf0a0; background: rgba(49, 208, 109, .12); }
+  .status.warn { color: #ffd47d; background: rgba(240, 166, 34, .13); }
+  .status.err { color: #ffabab; background: rgba(239, 91, 91, .13); }
+  .actions { display: flex; align-items: center; justify-content: flex-end; gap: 7px; flex-wrap: wrap; }
+  .actions .btn { min-height: 29px; padding: 0 9px; font-size: 12px; }
+  .license-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; padding: 12px; }
+  .license-card {
+    min-height: 148px;
+    padding: 13px;
+    border-radius: 8px;
+    border: 1px solid var(--line);
+    background: linear-gradient(155deg, rgba(19, 42, 61, .95), rgba(9, 23, 38, .92));
+  }
+  .license-top { display: flex; justify-content: space-between; gap: 10px; align-items: start; }
+  .license-id { font-weight: 850; margin-bottom: 7px; overflow-wrap: anywhere; }
+  .license-row { display: flex; justify-content: space-between; gap: 12px; color: var(--muted); font-size: 13px; margin-top: 7px; }
+  .bar { height: 4px; margin: 11px 0; background: rgba(148, 163, 184, .22); border-radius: 999px; overflow: hidden; }
+  .bar span { display: block; height: 100%; background: linear-gradient(90deg, var(--blue), var(--green)); border-radius: inherit; }
+  .balance-list, .activity-list, .settings-form, .log-box { padding: 12px 15px 15px; }
+  .balance-row, .activity-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line-soft); }
+  .balance-row:last-child, .activity-row:last-child { border-bottom: 0; }
+  .activity-left { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .activity-dot { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 8px; background: rgba(38, 132, 255, .16); color: #8bc8ff; font-weight: 900; }
+  .activity-title { font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .activity-note { color: var(--muted); font-size: 12px; margin-top: 3px; overflow-wrap: anywhere; }
+  .chart-wrap { padding: 12px 15px 18px; height: 224px; }
+  canvas { width: 100%; height: 100%; display: block; }
+  .empty { color: var(--muted); text-align: center; padding: 22px; }
+  .toast {
+    position: fixed;
+    right: 18px;
+    top: 18px;
+    z-index: 30;
+    max-width: min(520px, calc(100vw - 36px));
+    padding: 12px 14px;
+    border: 1px solid rgba(255, 255, 255, .12);
+    border-radius: 8px;
+    background: #1768d7;
+    color: white;
+    box-shadow: var(--shadow);
+    transform: translateX(120%);
+    transition: transform .2s ease;
+  }
+  .toast.show { transform: translateX(0); }
+  .toast.error { background: #c93c3c; }
+  .toast.success { background: #148f4d; }
+  .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  label { display: grid; gap: 6px; color: var(--muted); font-size: 12px; }
+  .checkbox-line { display: flex; align-items: center; gap: 8px; margin-top: 18px; color: #dbeafe; }
+  .log-box pre {
+    max-height: 222px;
+    overflow: auto;
+    margin: 0;
+    padding: 12px;
+    border: 1px solid var(--line-soft);
+    border-radius: 8px;
+    background: rgba(3, 12, 23, .72);
+    color: #cbd5e1;
+    font-size: 12px;
+    line-height: 1.55;
+    white-space: pre-wrap;
+  }
+  @media (max-width: 1360px) {
+    .cards { grid-template-columns: repeat(3, minmax(160px, 1fr)); }
+    .layout { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 900px) {
+    .app { display: block; }
+    .sidebar { position: static; height: auto; }
+    .side-card { position: static; margin-top: 16px; }
+    .main { padding: 18px 14px 24px; }
+    .topbar { align-items: flex-start; flex-direction: column; }
+    .tools { width: 100%; justify-content: flex-start; }
+    .search { width: 100%; }
+    .cards { grid-template-columns: 1fr; }
+    .settings-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div id="toast" class="toast"></div>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand"><span class="brand-mark"></span><span>WARP Proxy Manager</span></div>
+    <nav class="nav" aria-label="主导航">
+      <a href="#overview" class="active"><span class="nav-icon">O</span>总览</a>
+      <a href="#nodes"><span class="nav-icon">N</span>节点管理</a>
+      <a href="#licenses"><span class="nav-icon">L</span>License 管理</a>
+      <a href="#balancer"><span class="nav-icon">B</span>负载均衡</a>
+      <a href="#settings"><span class="nav-icon">S</span>节点设置</a>
+      <a href="#logs"><span class="nav-icon">G</span>日志</a>
+    </nav>
+    <div class="side-card">
+      <dl>
+        <div><dt>运行状态</dt><dd id="sideStatus">检查中</dd></div>
+        <div><dt>运行版本</dt><dd>v1.0.0</dd></div>
+        <div><dt>节点总数</dt><dd id="sideNodeCount">0</dd></div>
+        <div><dt>健康节点</dt><dd id="sideHealthyCount">0</dd></div>
+        <div><dt>告警节点</dt><dd id="sideWarnCount">0</dd></div>
+      </dl>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar" id="overview">
+      <h1>统一管理面板</h1>
+      <div class="tools">
+        <div class="search">
+          <span>查</span>
+          <input id="searchInput" placeholder="搜索节点、IP、License..." autocomplete="off">
+          <kbd>Ctrl K</kbd>
+        </div>
+        <button id="refreshBtn" class="btn">刷新</button>
+        <button id="rotateAllBtn" class="btn amber">批量轮换</button>
+        <button id="generateAllBtn" class="btn secondary">批量生成 License</button>
+        <div class="profile"><span class="avatar"></span><strong>admin</strong></div>
+      </div>
+    </header>
+
+    <section class="cards" aria-label="指标">
+      <article class="metric green">
+        <div class="metric-head"><span class="metric-icon">N</span><span class="metric-label">在线节点</span></div>
+        <div id="statOnline" class="metric-value">0 / 0</div>
+        <div class="metric-sub"><strong id="statOnlineRate">0%</strong> 在线率</div>
+      </article>
+      <article class="metric">
+        <div class="metric-head"><span class="metric-icon">IP</span><span class="metric-label">当前出口 IP</span></div>
+        <div id="statExitIp" class="metric-value">-</div>
+        <div id="statExitNode" class="metric-sub">等待节点上报</div>
+      </article>
+      <article class="metric">
+        <div class="metric-head"><span class="metric-icon">L</span><span class="metric-label">License 池</span></div>
+        <div id="statLicenses" class="metric-value">0</div>
+        <div id="statLicenseSub" class="metric-sub">0 个当前绑定</div>
+      </article>
+      <article class="metric cyan">
+        <div class="metric-head"><span class="metric-icon">R</span><span class="metric-label">刷新间隔</span></div>
+        <div class="metric-value">15 秒</div>
+        <div id="nextRefresh" class="metric-sub">自动刷新启用</div>
+      </article>
+      <article class="metric amber">
+        <div class="metric-head"><span class="metric-icon">T</span><span class="metric-label">总流量</span></div>
+        <div id="statTraffic" class="metric-value">0 B</div>
+        <div id="statConnections" class="metric-sub">0 次连接</div>
+      </article>
+    </section>
+
+    <div class="layout">
+      <div class="stack">
+        <section class="panel" id="nodes">
+          <div class="panel-head">
+            <div class="panel-title"><h2>节点管理</h2><span id="nodeCountBadge" class="count">0</span></div>
+            <div class="panel-tools">
+              <select id="statusFilter">
+                <option value="all">全部状态</option>
+                <option value="connected">在线</option>
+                <option value="warning">告警/离线</option>
+              </select>
+              <button id="nodeGenerateBtn" class="btn">生成 License</button>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>节点名称</th>
+                  <th>状态</th>
+                  <th>网络</th>
+                  <th>连通性</th>
+                  <th>当前 IP</th>
+                  <th>当前 License</th>
+                  <th>代理端口</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="nodeRows"><tr><td colspan="8" class="empty">加载中...</td></tr></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="panel" id="licenses">
+          <div class="panel-head">
+            <div class="panel-title"><h2>License 管理</h2><span id="licenseCountBadge" class="count">0</span></div>
+            <div class="panel-tools">
+              <button id="licensesRefreshBtn" class="btn secondary">刷新</button>
+              <button id="licensesGenerateBtn" class="btn">生成 License</button>
+            </div>
+          </div>
+          <div id="licenseGrid" class="license-grid"><div class="empty">选择一个节点查看 License 池</div></div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head"><h2>代理流量趋势</h2><div class="subtle">基于管理端负载均衡统计</div></div>
+          <div class="chart-wrap"><canvas id="trafficChart" width="1000" height="240"></canvas></div>
+        </section>
+      </div>
+
+      <aside class="side-grid">
+        <section class="panel" id="balancer">
+          <div class="panel-head">
+            <h2>负载均衡</h2>
+            <span id="balancerState" class="status warn">检查中</span>
+          </div>
+          <div id="balanceList" class="balance-list"><div class="empty">加载中...</div></div>
+        </section>
+
+        <section class="panel" id="settings">
+          <div class="panel-head">
+            <h2>节点设置</h2>
+            <span id="selectedNodeLabel" class="subtle">未选择节点</span>
+          </div>
+          <div class="settings-form">
+            <div class="settings-grid">
+              <label>自动轮换间隔（分钟）<input class="field" id="settingInterval" type="number" min="0" value="0"></label>
+              <label>健康检查间隔（秒）<input class="field" id="settingHealth" type="number" min="10" max="3600" value="60"></label>
+            </div>
+            <label class="checkbox-line"><input id="settingAuto" type="checkbox">启用自动轮换</label>
+            <div class="actions" style="justify-content:flex-start;margin-top:12px;">
+              <button id="settingsReadBtn" class="btn secondary">读取设置</button>
+              <button id="settingsSaveBtn" class="btn">保存设置</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head"><h2>最近活动</h2><button id="activityRefreshBtn" class="btn secondary">刷新</button></div>
+          <div id="activityList" class="activity-list"><div class="empty">暂无活动</div></div>
+        </section>
+
+        <section class="panel" id="logs">
+          <div class="panel-head">
+            <h2>节点日志</h2>
+            <div class="panel-tools">
+              <button id="logsRefreshBtn" class="btn secondary">刷新</button>
+              <button id="logsClearBtn" class="btn red">清空</button>
+            </div>
+          </div>
+          <div class="log-box"><pre id="nodeLogs">选择一个节点查看日志</pre></div>
+        </section>
+      </aside>
+    </div>
+  </main>
+</div>
+
+<script>
+const dashboardUrl = '/api/dashboard';
+let lastData = null;
+let selectedNodeId = null;
+let trafficHistory = [];
+let nextRefreshSeconds = 15;
+
+function byId(id) {
+  return document.getElementById(id);
+}
+
+function showToast(message, type = 'info') {
+  const toast = byId('toast');
+  toast.textContent = message;
+  toast.className = `toast ${type} show`;
+  setTimeout(() => toast.classList.remove('show'), 3300);
+}
+
+async function apiJson(url, options = {}) {
+  const request = { ...options, headers: { 'Content-Type': 'application/json', ...(options.headers || {}) } };
+  if (request.body && typeof request.body !== 'string') {
+    request.body = JSON.stringify(request.body);
+  }
+  const res = await fetch(url, request);
+  if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
+  return res.json();
+}
+
+function nodeUrl(nodeId, path) {
+  return `/api/nodes/${encodeURIComponent(nodeId)}${path}`;
+}
+
+function escapeHtml(value) {
+  const div = document.createElement('div');
+  div.textContent = value == null ? '' : String(value);
+  return div.innerHTML;
+}
+
+function escapeAttr(value) {
+  return escapeHtml(value).replace(/"/g, '&quot;');
+}
+
+function shortId(value) {
+  if (!value) return '-';
+  const text = String(value);
+  return text.length > 14 ? `${text.slice(0, 12)}...` : text;
+}
+
+function formatBytes(value) {
+  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  let size = Number(value || 0);
+  let idx = 0;
+  while (size >= 1024 && idx < units.length - 1) {
+    size /= 1024;
+    idx += 1;
+  }
+  return `${size >= 10 || idx === 0 ? size.toFixed(0) : size.toFixed(1)} ${units[idx]}`;
+}
+
+function statusPill(state, text) {
+  const cls = state === 'ok' ? 'ok' : state === 'warn' ? 'warn' : 'err';
+  return `<span class="status ${cls}">${escapeHtml(text)}</span>`;
+}
+
+function allTargets(data) {
+  const balancers = data?.balancers || {};
+  return Object.values(balancers).flatMap(balancer => {
+    const targets = balancer?.targets || [];
+    return targets.map(target => ({ ...target, balancer: balancer.name, bind_port: balancer.bind_port }));
+  });
+}
+
+function allLicenses(nodes) {
+  return (nodes || []).flatMap(node => (node.licenses || []).map(license => ({ ...license, node_id: node.id })));
+}
+
+function render(data) {
+  if (!data) return;
+  lastData = data;
+  const nodes = data.nodes || [];
+  if (selectedNodeId && !nodes.some(node => node.id === selectedNodeId)) {
+    selectedNodeId = null;
+  }
+  if (!selectedNodeId && nodes.length) {
+    selectedNodeId = nodes[0].id;
+  }
+
+  const summary = data.summary || {};
+  const connected = Number(summary.connected_nodes || 0);
+  const total = Number(summary.total_nodes || nodes.length || 0);
+  const licenses = allLicenses(nodes);
+  const targets = allTargets(data);
+  const totalBytes = targets.reduce((sum, target) => sum + Number(target.total_bytes || 0), 0);
+  const totalConnections = targets.reduce((sum, target) => sum + Number(target.total_connections || 0), 0);
+  const warningNodes = nodes.filter(node => !node.reachable || node.status?.warp_status !== 'connected').length;
+  const firstConnected = nodes.find(node => node.status?.external_ip);
+
+  byId('statOnline').textContent = `${connected} / ${total}`;
+  byId('statOnlineRate').textContent = total ? `${Math.round(connected * 100 / total)}%` : '0%';
+  byId('statExitIp').textContent = firstConnected?.status?.external_ip || '-';
+  byId('statExitNode').textContent = firstConnected ? `${firstConnected.id} / Cloudflare WARP` : '等待节点上报';
+  byId('statLicenses').textContent = licenses.length;
+  byId('statLicenseSub').textContent = `${licenses.filter(item => item.is_current).length} 个当前绑定`;
+  byId('statTraffic').textContent = formatBytes(totalBytes);
+  byId('statConnections').textContent = `${totalConnections} 次连接`;
+  byId('sideStatus').textContent = warningNodes ? '需要关注' : '运行中';
+  byId('sideNodeCount').textContent = total;
+  byId('sideHealthyCount').textContent = connected;
+  byId('sideWarnCount').textContent = warningNodes;
+  byId('nodeCountBadge').textContent = total;
+  byId('licenseCountBadge').textContent = licenses.length;
+  byId('selectedNodeLabel').textContent = selectedNodeId || '未选择节点';
+
+  recordTraffic(totalBytes);
+  renderNodes(nodes);
+  renderLicenses(nodes.find(node => node.id === selectedNodeId) || nodes[0]);
+  renderBalancers(data.balancers || {});
+  renderActivities(nodes, targets);
+  drawTrafficChart();
+}
+
+function renderNodes(nodes) {
+  const query = byId('searchInput').value.trim().toLowerCase();
+  const filter = byId('statusFilter').value;
+  const visible = nodes.filter(node => {
+    const status = node.status || {};
+    const text = `${node.id} ${node.base_url} ${status.external_ip || ''} ${status.current_license_id || ''}`.toLowerCase();
+    const matchesQuery = !query || text.includes(query);
+    const connected = node.reachable && status.warp_status === 'connected';
+    const matchesFilter = filter === 'all' || (filter === 'connected' ? connected : !connected);
+    return matchesQuery && matchesFilter;
+  });
+
+  const rows = byId('nodeRows');
+  if (!visible.length) {
+    rows.innerHTML = '<tr><td colspan="8" class="empty">没有匹配节点</td></tr>';
+    return;
+  }
+
+  rows.innerHTML = visible.map(node => {
+    const status = node.status || {};
+    const connected = node.reachable && status.warp_status === 'connected';
+    const state = connected ? 'ok' : node.reachable ? 'warn' : 'err';
+    const stateText = connected ? '在线' : node.reachable ? (status.warp_status || '未连接') : '离线';
+    const connectivity = node.reachable ? 'API 可达' : 'API 不可达';
+    const network = node.base_url === 'local' ? '本地容器' : 'Docker 内部网络';
+    const encodedId = escapeAttr(node.id);
+    return `<tr class="${node.id === selectedNodeId ? 'selected' : ''}">
+      <td><div class="node-name">${escapeHtml(node.id)}</div><div class="subtle">${escapeHtml(node.base_url || '-')}</div></td>
+      <td>${statusPill(state, stateText)}</td>
+      <td>${escapeHtml(network)}</td>
+      <td style="color:${node.reachable ? 'var(--green)' : 'var(--muted)'}">${escapeHtml(connectivity)}</td>
+      <td><code>${escapeHtml(status.external_ip || '-')}</code></td>
+      <td><code>${escapeHtml(shortId(status.current_license_id || '-'))}</code></td>
+      <td><code>1080 / 8080</code></td>
+      <td>
+        <div class="actions">
+          <button class="btn secondary" data-select-node="${encodedId}">查看</button>
+          <button class="btn green" data-node-id="${encodedId}" data-node-action="connect">连接</button>
+          <button class="btn amber" data-node-id="${encodedId}" data-node-action="rotate">轮换</button>
+          <button class="btn red" data-node-id="${encodedId}" data-node-action="disconnect">断开</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function renderLicenses(node) {
+  const grid = byId('licenseGrid');
+  if (!node) {
+    grid.innerHTML = '<div class="empty">没有节点数据</div>';
+    return;
+  }
+  const licenses = node.licenses || [];
+  byId('selectedNodeLabel').textContent = node.id;
+  if (!licenses.length) {
+    grid.innerHTML = `<div class="empty">${escapeHtml(node.id)} 还没有 License</div>`;
+    return;
+  }
+  grid.innerHTML = licenses.slice(0, 12).map((license, index) => {
+    const active = license.is_current || license.status === 'active';
+    const percent = Math.max(12, Math.min(95, active ? 70 : 30 + index * 8));
+    const nodeId = escapeAttr(node.id);
+    const licenseId = escapeAttr(license.id);
+    return `<article class="license-card">
+      <div class="license-top">
+        <div><div class="license-id">${escapeHtml(license.label || shortId(license.id))}</div><code>${escapeHtml(shortId(license.id))}</code></div>
+        ${statusPill(active ? 'ok' : 'warn', active ? '活跃' : (license.status || '备用'))}
+      </div>
+      <div class="license-row"><span>绑定节点</span><strong>${escapeHtml(node.id)}</strong></div>
+      <div class="license-row"><span>初始 IP</span><code>${escapeHtml(license.initial_ip || '-')}</code></div>
+      <div class="license-row"><span>创建时间</span><span>${escapeHtml(String(license.created_at || '-').slice(0, 10))}</span></div>
+      <div class="bar"><span style="width:${percent}%"></span></div>
+      <div class="actions" style="justify-content:flex-start">
+        ${active ? '' : `<button class="btn secondary" data-node-id="${nodeId}" data-license-id="${licenseId}" data-license-action="activate">切换</button>`}
+        ${active ? '' : `<button class="btn red" data-node-id="${nodeId}" data-license-id="${licenseId}" data-license-action="delete">删除</button>`}
+      </div>
+    </article>`;
+  }).join('');
+}
+
+function renderBalancers(balancers) {
+  const list = byId('balanceList');
+  const entries = Object.values(balancers || {});
+  const targets = entries.flatMap(balancer => (balancer.targets || []).map(target => ({ ...target, balancer: balancer.name, bind_port: balancer.bind_port })));
+  const hasHealthyTarget = targets.some(target => target.healthy);
+  byId('balancerState').className = `status ${hasHealthyTarget ? 'ok' : 'err'}`;
+  byId('balancerState').textContent = hasHealthyTarget ? '已启用' : '无健康目标';
+  if (!targets.length) {
+    list.innerHTML = '<div class="empty">没有负载均衡目标</div>';
+    return;
+  }
+  list.innerHTML = targets.map(target => `<div class="balance-row">
+    <div>
+      <strong>${escapeHtml(target.label)}</strong>
+      <div class="subtle">${escapeHtml(target.balancer)} / ${escapeHtml(target.host)}:${escapeHtml(target.port)}</div>
+    </div>
+    <div style="text-align:right">
+      ${statusPill(target.healthy ? 'ok' : 'err', target.healthy ? '健康' : '异常')}
+      <div class="subtle">${formatBytes(target.total_bytes)} / ${target.total_connections || 0} 连接</div>
+    </div>
+  </div>`).join('');
+}
+
+function renderActivities(nodes, targets) {
+  const activities = [];
+  for (const node of nodes) {
+    const status = node.status || {};
+    const connected = node.reachable && status.warp_status === 'connected';
+    activities.push({
+      type: connected ? 'OK' : '!',
+      title: `${node.id} ${node.reachable ? status.warp_status || 'unknown' : '不可访问'}`,
+      note: `IP: ${status.external_ip || '-'} / License: ${shortId(status.current_license_id || '-')}`,
+    });
+  }
+  for (const target of targets.filter(item => !item.healthy)) {
+    activities.push({ type: '!', title: `${target.label} 负载目标异常`, note: target.last_error || '连接失败' });
+  }
+  byId('activityList').innerHTML = activities.slice(0, 8).map(item => `<div class="activity-row">
+    <div class="activity-left"><span class="activity-dot">${escapeHtml(item.type)}</span><div><div class="activity-title">${escapeHtml(item.title)}</div><div class="activity-note">${escapeHtml(item.note)}</div></div></div>
+    <span class="subtle">刚刚</span>
+  </div>`).join('') || '<div class="empty">暂无活动</div>';
+}
+
+function recordTraffic(totalBytes) {
+  const last = trafficHistory[trafficHistory.length - 1];
+  if (!last || last.value !== totalBytes) {
+    trafficHistory.push({ time: new Date(), value: totalBytes });
+    trafficHistory = trafficHistory.slice(-32);
+  }
+}
+
+function drawTrafficChart() {
+  const canvas = byId('trafficChart');
+  const ctx = canvas.getContext('2d');
+  const width = canvas.width;
+  const height = canvas.height;
+  ctx.clearRect(0, 0, width, height);
+  ctx.strokeStyle = 'rgba(149, 168, 189, .14)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i < 6; i += 1) {
+    const y = 24 + i * 34;
+    ctx.beginPath();
+    ctx.moveTo(42, y);
+    ctx.lineTo(width - 18, y);
+    ctx.stroke();
+  }
+  const values = trafficHistory.length ? trafficHistory.map(item => item.value) : [0, 0];
+  const max = Math.max(...values, 1);
+  const points = values.map((value, index) => {
+    const x = 42 + index * ((width - 70) / Math.max(values.length - 1, 1));
+    const y = height - 28 - (value / max) * (height - 58);
+    return [x, y];
+  });
+  const gradient = ctx.createLinearGradient(0, 20, 0, height);
+  gradient.addColorStop(0, 'rgba(38, 132, 255, .3)');
+  gradient.addColorStop(1, 'rgba(49, 208, 109, 0)');
+  ctx.beginPath();
+  points.forEach(([x, y], index) => index ? ctx.lineTo(x, y) : ctx.moveTo(x, y));
+  ctx.lineTo(points[points.length - 1][0], height - 28);
+  ctx.lineTo(points[0][0], height - 28);
+  ctx.closePath();
+  ctx.fillStyle = gradient;
+  ctx.fill();
+  ctx.beginPath();
+  points.forEach(([x, y], index) => index ? ctx.lineTo(x, y) : ctx.moveTo(x, y));
+  ctx.strokeStyle = '#2ea7ff';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+  ctx.fillStyle = '#9fb2c7';
+  ctx.font = '12px sans-serif';
+  ctx.fillText(formatBytes(max), 4, 26);
+  ctx.fillText('0 B', 14, height - 28);
+}
+
+async function refreshAll() {
+  try {
+    const hadSelectedNode = !!selectedNodeId;
+    const data = await apiJson(dashboardUrl);
+    render(data);
+    nextRefreshSeconds = 15;
+    if (!hadSelectedNode && selectedNodeId) {
+      await loadNodeSettings(selectedNodeId);
+      await loadNodeLogs(selectedNodeId);
+    }
+  } catch (error) {
+    showToast(`刷新失败: ${error.message}`, 'error');
+  }
+}
+
+async function selectNode(nodeId) {
+  selectedNodeId = nodeId;
+  render(lastData);
+  await loadNodeSettings(nodeId);
+  await loadNodeLogs(nodeId);
+}
+
+async function nodeAction(nodeId, action) {
+  try {
+    showToast('操作执行中...');
+    await apiJson(nodeUrl(nodeId, `/${action}`), { method: 'POST' });
+    showToast('操作完成', 'success');
+    selectedNodeId = nodeId;
+    setTimeout(refreshAll, 1000);
+  } catch (error) {
+    showToast(`操作失败: ${error.message}`, 'error');
+  }
+}
+
+async function clusterAction(url, label) {
+  try {
+    showToast(`${label}执行中...`);
+    await apiJson(url, { method: 'POST' });
+    showToast(`${label}已下发`, 'success');
+    setTimeout(refreshAll, 1200);
+  } catch (error) {
+    showToast(`${label}失败: ${error.message}`, 'error');
+  }
+}
+
+async function activateLicense(nodeId, licenseId) {
+  try {
+    await apiJson(nodeUrl(nodeId, `/licenses/${encodeURIComponent(licenseId)}/activate`), { method: 'POST' });
+    showToast('License 已切换', 'success');
+    await refreshAll();
+  } catch (error) {
+    showToast(`切换失败: ${error.message}`, 'error');
+  }
+}
+
+async function deleteLicense(nodeId, licenseId) {
+  if (!confirm(`确定删除 License ${shortId(licenseId)}?`)) return;
+  try {
+    await apiJson(nodeUrl(nodeId, `/licenses/${encodeURIComponent(licenseId)}`), { method: 'DELETE' });
+    showToast('License 已删除', 'success');
+    await refreshAll();
+  } catch (error) {
+    showToast(`删除失败: ${error.message}`, 'error');
+  }
+}
+
+async function loadNodeSettings(nodeId) {
+  try {
+    const settings = await apiJson(nodeUrl(nodeId, '/settings'));
+    byId('selectedNodeLabel').textContent = nodeId;
+    byId('settingInterval').value = settings.refresh_interval_minutes ?? 0;
+    byId('settingHealth').value = settings.health_check_interval ?? 60;
+    byId('settingAuto').checked = !!settings.auto_rotate;
+  } catch (error) {
+    showToast(`读取设置失败: ${error.message}`, 'error');
+  }
+}
+
+async function saveNodeSettings() {
+  if (!selectedNodeId) {
+    showToast('请先选择节点', 'error');
+    return;
+  }
+  const payload = {
+    refresh_interval_minutes: Number(byId('settingInterval').value || 0),
+    health_check_interval: Number(byId('settingHealth').value || 60),
+    auto_rotate: byId('settingAuto').checked,
+  };
+  try {
+    await apiJson(nodeUrl(selectedNodeId, '/settings'), { method: 'POST', body: payload });
+    showToast('设置已保存', 'success');
+  } catch (error) {
+    showToast(`保存失败: ${error.message}`, 'error');
+  }
+}
+
+async function loadNodeLogs(nodeId) {
+  try {
+    const data = await apiJson(nodeUrl(nodeId, '/logs?tail=220'));
+    byId('nodeLogs').textContent = (data.logs || []).join('\n') || '暂无日志';
+  } catch (error) {
+    showToast(`读取日志失败: ${error.message}`, 'error');
+  }
+}
+
+async function clearNodeLogs() {
+  if (!selectedNodeId) {
+    showToast('请先选择节点', 'error');
+    return;
+  }
+  try {
+    await apiJson(nodeUrl(selectedNodeId, '/logs/clear'), { method: 'POST' });
+    byId('nodeLogs').textContent = '日志已清空';
+    showToast('日志已清空', 'success');
+  } catch (error) {
+    showToast(`清空失败: ${error.message}`, 'error');
+  }
+}
+
+document.addEventListener('click', event => {
+  const selectButton = event.target.closest('[data-select-node]');
+  if (selectButton) {
+    selectNode(selectButton.dataset.selectNode);
+    return;
+  }
+  const nodeButton = event.target.closest('[data-node-action]');
+  if (nodeButton) {
+    nodeAction(nodeButton.dataset.nodeId, nodeButton.dataset.nodeAction);
+    return;
+  }
+  const licenseButton = event.target.closest('[data-license-action]');
+  if (licenseButton) {
+    const action = licenseButton.dataset.licenseAction;
+    if (action === 'activate') activateLicense(licenseButton.dataset.nodeId, licenseButton.dataset.licenseId);
+    if (action === 'delete') deleteLicense(licenseButton.dataset.nodeId, licenseButton.dataset.licenseId);
+  }
+});
+
+byId('refreshBtn').addEventListener('click', refreshAll);
+byId('activityRefreshBtn').addEventListener('click', refreshAll);
+byId('rotateAllBtn').addEventListener('click', () => clusterAction('/api/cluster/rotate', '批量轮换'));
+byId('generateAllBtn').addEventListener('click', () => clusterAction('/api/cluster/licenses/generate', '批量生成 License'));
+byId('nodeGenerateBtn').addEventListener('click', () => selectedNodeId ? nodeAction(selectedNodeId, 'licenses/generate') : clusterAction('/api/cluster/licenses/generate', '批量生成 License'));
+byId('licensesRefreshBtn').addEventListener('click', refreshAll);
+byId('licensesGenerateBtn').addEventListener('click', () => selectedNodeId ? nodeAction(selectedNodeId, 'licenses/generate') : clusterAction('/api/cluster/licenses/generate', '批量生成 License'));
+byId('settingsReadBtn').addEventListener('click', () => selectedNodeId && loadNodeSettings(selectedNodeId));
+byId('settingsSaveBtn').addEventListener('click', saveNodeSettings);
+byId('logsRefreshBtn').addEventListener('click', () => selectedNodeId && loadNodeLogs(selectedNodeId));
+byId('logsClearBtn').addEventListener('click', clearNodeLogs);
+byId('searchInput').addEventListener('input', () => render(lastData));
+byId('statusFilter').addEventListener('change', () => render(lastData));
+
+document.addEventListener('keydown', event => {
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+    event.preventDefault();
+    byId('searchInput').focus();
+  }
+});
+
+document.querySelectorAll('.nav a').forEach(link => {
+  link.addEventListener('click', () => {
+    document.querySelectorAll('.nav a').forEach(item => item.classList.remove('active'));
+    link.classList.add('active');
+  });
+});
+
+setInterval(() => {
+  nextRefreshSeconds -= 1;
+  if (nextRefreshSeconds <= 0) {
+    refreshAll();
+  } else {
+    byId('nextRefresh').textContent = `${nextRefreshSeconds} 秒后刷新`;
+  }
+}, 1000);
+
+refreshAll();
+</script>
+</body>
+</html>

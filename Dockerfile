@@ -41,6 +41,8 @@ RUN wget -O /tmp/gost.gz "https://github.com/ginuerzh/gost/releases/download/v${
 # ── Python dependencies ─────────────────────────────────────────
 COPY requirements.txt /tmp/requirements.txt
 RUN pip3 install -r /tmp/requirements.txt && \
+    ln -sf /usr/bin/python3 /usr/local/bin/python && \
+    ln -sf /usr/bin/pip3 /usr/local/bin/pip && \
     rm -f /tmp/requirements.txt
 
 # ── Application files ───────────────────────────────────────────
