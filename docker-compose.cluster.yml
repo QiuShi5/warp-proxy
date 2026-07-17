@@ -1,0 +1,81 @@
+version: "3.8"
+
+x-warp-node: &warp-node
+  image: ${WARP_PROXY_IMAGE:-ghcr.io/qiushi5/warp-proxy:latest}
+  restart: unless-stopped
+  init: true
+  networks:
+    - warp-proxy-net
+  cap_add:
+    - NET_ADMIN
+  devices:
+    - /dev/net/tun:/dev/net/tun
+  environment:
+    - APP_MODE=node
+    - PROXY_USER=${PROXY_USER:-}
+    - PROXY_PASS=${PROXY_PASS:-}
+    - REFRESH_INTERVAL=${REFRESH_INTERVAL:-30}
+  expose:
+    - "1080"
+    - "8080"
+    - "8000"
+  healthcheck:
+    test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8000/api/health"]
+    interval: 30s
+    timeout: 5s
+    retries: 3
+    start_period: 60s
+
+services:
+  warp-1:
+    <<: *warp-node
+    container_name: warp-node-1
+    volumes:
+      - ./cluster-data/warp-1/warp:/var/lib/cloudflare-warp
+      - ./cluster-data/warp-1/data:/data
+
+  warp-2:
+    <<: *warp-node
+    container_name: warp-node-2
+    volumes:
+      - ./cluster-data/warp-2/warp:/var/lib/cloudflare-warp
+      - ./cluster-data/warp-2/data:/data
+
+  warp-3:
+    <<: *warp-node
+    container_name: warp-node-3
+    volumes:
+      - ./cluster-data/warp-3/warp:/var/lib/cloudflare-warp
+      - ./cluster-data/warp-3/data:/data
+
+  warp-manager:
+    image: ${WARP_PROXY_IMAGE:-ghcr.io/qiushi5/warp-proxy:latest}
+    container_name: warp-manager
+    restart: unless-stopped
+    init: true
+    networks:
+      - warp-proxy-net
+    environment:
+      - APP_MODE=manager
+      - CLUSTER_NODES=warp-1=http://warp-1:8000,warp-2=http://warp-2:8000,warp-3=http://warp-3:8000
+      - SOCKS_TARGETS=warp-1=warp-1:1080,warp-2=warp-2:1080,warp-3=warp-3:1080
+      - HTTP_TARGETS=warp-1=warp-1:8080,warp-2=warp-2:8080,warp-3=warp-3:8080
+    ports:
+      - "127.0.0.1:1080:1080" # unified SOCKS5 proxy
+      - "127.0.0.1:8080:8080" # unified HTTP proxy
+      - "127.0.0.1:8000:8000" # unified Web management panel
+    depends_on:
+      - warp-1
+      - warp-2
+      - warp-3
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+networks:
+  warp-proxy-net:
+    name: warp-proxy-net
+    driver: bridge
