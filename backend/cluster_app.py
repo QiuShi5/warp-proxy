@@ -16,6 +16,7 @@ from typing import Any, Dict, List
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse
 
+from .auth import install_auth
 from .cluster_manager import (
     ClusterClient,
     TcpLoadBalancer,
@@ -64,6 +65,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="warp-proxy-cluster", version="1.0.0", lifespan=lifespan)
+install_auth(app)
 
 
 def _unwrap_node_response(result: Dict[str, Any]) -> Dict[str, Any]:

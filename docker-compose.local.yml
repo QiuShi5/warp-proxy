@@ -17,6 +17,9 @@ services:
       - APP_MODE=node
       - PROXY_USER=${PROXY_USER:-}
       - PROXY_PASS=${PROXY_PASS:-}
+      - WEB_USER=${WEB_USER:-admin}
+      - WEB_PASS=${WEB_PASS:-change_this_web_password}
+      - WEB_SESSION_SECRET=${WEB_SESSION_SECRET:-change_this_session_secret}
       - REFRESH_INTERVAL=${REFRESH_INTERVAL:-30}
     ports:
       - "127.0.0.1:1081:1080"

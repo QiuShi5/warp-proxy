@@ -50,6 +50,18 @@ class PackagingTests(unittest.TestCase):
         self.assertIn('DASHBOARD_HTML = STATIC_DIR / "dashboard.html"', read_text("backend/app.py"))
         self.assertIn('DASHBOARD_HTML = STATIC_DIR / "dashboard.html"', read_text("backend/cluster_app.py"))
 
+    def test_management_auth_is_wired_for_single_and_cluster_apps(self):
+        single_app = read_text("backend/app.py")
+        cluster_app = read_text("backend/cluster_app.py")
+        cluster_manager = read_text("backend/cluster_manager.py")
+
+        self.assertIn("from .auth import install_auth", single_app)
+        self.assertIn("from .auth import install_auth", cluster_app)
+        self.assertIn("install_auth(app)", single_app)
+        self.assertIn("install_auth(app)", cluster_app)
+        self.assertIn("get_node_basic_auth_header", cluster_manager)
+        self.assertIn("headers=self.auth_headers", cluster_manager)
+
     def test_dashboard_uses_current_binding_for_active_license(self):
         dashboard = read_text("backend/static/dashboard.html")
 
@@ -58,10 +70,13 @@ class PackagingTests(unittest.TestCase):
 
     def test_dashboard_text_is_not_mojibake(self):
         dashboard = read_text("backend/static/dashboard.html")
+        auth = read_text("backend/auth.py")
 
         for text in ("warp-proxy 管理面板", "总览", "节点管理", "License 管理", "负载均衡", "节点设置", "日志"):
             self.assertIn(text, dashboard)
+        self.assertIn("登录后访问管理面板和管理 API", auth)
         self.assertNotIn("?" * 4, dashboard)
+        self.assertNotIn("?" * 4, auth)
 
     def test_dashboard_keeps_license_generation_out_of_node_management(self):
         dashboard = read_text("backend/static/dashboard.html")
@@ -69,6 +84,15 @@ class PackagingTests(unittest.TestCase):
         self.assertNotIn("nodeGenerateBtn", dashboard)
         self.assertNotIn("generateAllBtn", dashboard)
         self.assertIn("licensesGenerateBtn", dashboard)
+
+    def test_dashboard_handles_management_auth_session(self):
+        dashboard = read_text("backend/static/dashboard.html")
+
+        self.assertIn("logoutBtn", dashboard)
+        self.assertIn("/api/auth/me", dashboard)
+        self.assertIn("/api/auth/logout", dashboard)
+        self.assertIn("res.status === 401", dashboard)
+        self.assertIn("window.location.href = '/login'", dashboard)
 
     def test_compose_healthchecks_target_existing_api(self):
         for compose_file in (
@@ -80,6 +104,20 @@ class PackagingTests(unittest.TestCase):
             self.assertIn("http://127.0.0.1:8000/api/health", compose)
             self.assertNotIn("index.html", compose)
             self.assertNotIn("cluster.html", compose)
+
+    def test_compose_files_define_management_auth_environment(self):
+        for compose_file in (
+            "docker-compose.yml",
+            "docker-compose.cluster.yml",
+            "docker-compose.local.yml",
+        ):
+            compose = read_text(compose_file)
+            self.assertIn("WEB_USER=${WEB_USER:-admin}", compose)
+            self.assertIn("WEB_PASS=${WEB_PASS:-change_this_web_password}", compose)
+            self.assertIn(
+                "WEB_SESSION_SECRET=${WEB_SESSION_SECRET:-change_this_session_secret}",
+                compose,
+            )
 
 
 if __name__ == "__main__":

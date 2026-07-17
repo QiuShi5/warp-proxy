@@ -16,6 +16,8 @@ from urllib.parse import urlparse
 
 import httpx
 
+from .auth import get_node_basic_auth_header
+
 logger = logging.getLogger(__name__)
 
 DEFAULT_CLUSTER_NODES = (
@@ -316,6 +318,7 @@ class ClusterClient:
     def __init__(self, nodes: List[ClusterNode], timeout: float = 10.0):
         self.nodes = nodes
         self.timeout = timeout
+        self.auth_headers = get_node_basic_auth_header()
 
     def get_node(self, node_id: str) -> ClusterNode:
         for node in self.nodes:
@@ -371,7 +374,12 @@ class ClusterClient:
         url = f"{node.base_url}{path}"
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
-                response = await client.request(method, url, json=json_body)
+                response = await client.request(
+                    method,
+                    url,
+                    json=json_body,
+                    headers=self.auth_headers,
+                )
             if response.status_code >= 400:
                 return {
                     "ok": False,

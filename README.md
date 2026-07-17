@@ -25,6 +25,7 @@
 - 支持通过数据卷持久化 WARP 注册状态
 - 支持按时间间隔自动断开重连，以尝试刷新出口 IP
 - 支持代理用户名/密码认证
+- 支持 Web 管理面板和管理 API 登录认证
 - 支持统一 Web 面板查看状态、出口 IP、License 池、日志和设置
 - 支持多节点 WARP 代理池和统一入口负载均衡
 
@@ -89,6 +90,9 @@ cp .env.example .env
 WARP_PROXY_IMAGE=ghcr.io/qiushi5/warp-proxy:latest
 PROXY_USER=your_username
 PROXY_PASS=your_strong_password
+WEB_USER=admin
+WEB_PASS=your_web_panel_password
+WEB_SESSION_SECRET=your_long_random_session_secret
 REFRESH_INTERVAL=30
 ```
 
@@ -99,6 +103,24 @@ REFRESH_INTERVAL=30
 ### `PROXY_PASS`
 
 代理认证密码。未设置时不会启用密码认证。强烈建议使用强密码。
+
+### `WEB_USER`
+
+Web 管理面板和管理 API 登录用户名。默认 `admin`。
+
+### `WEB_PASS`
+
+Web 管理面板和管理 API 登录密码。默认 Compose 会填入 `change_this_web_password` 占位值，正式部署前必须修改。
+
+如果 `WEB_PASS` 未设置或仍是默认占位值，后端会优先复用 `PROXY_PASS`；如果二者都未设置，才使用内置默认值。
+
+### `WEB_SESSION_SECRET`
+
+Web 登录会话签名密钥。建议使用长随机字符串。正式部署前必须修改，修改后已有登录会话会失效。
+
+### `WEB_COOKIE_SECURE`
+
+设置为 `1` 时，浏览器登录 cookie 只会通过 HTTPS 发送。直接用 Compose 的 HTTP 面板访问时应保持默认 `0`。
 
 ### `REFRESH_INTERVAL`
 
