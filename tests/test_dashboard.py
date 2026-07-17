@@ -1,3 +1,5 @@
+import logging
+import threading
 import unittest
 from unittest.mock import AsyncMock, patch
 
@@ -8,6 +10,25 @@ import backend.cluster_app as cluster_app
 
 
 class SingleDashboardTests(unittest.TestCase):
+    def test_log_buffer_handle_does_not_deadlock(self):
+        buffer = single_app.LogBuffer()
+        record = logging.LogRecord(
+            "backend.warp_manager",
+            logging.INFO,
+            __file__,
+            1,
+            "startup log",
+            (),
+            None,
+        )
+
+        thread = threading.Thread(target=buffer.handle, args=(record,), daemon=True)
+        thread.start()
+        thread.join(timeout=1)
+
+        self.assertFalse(thread.is_alive())
+        self.assertEqual(buffer.get_logs(), ["startup log"])
+
     def test_single_dashboard_payload_uses_one_node_shape(self):
         licenses = [{"id": "license-1", "is_current": True}]
         status = {
