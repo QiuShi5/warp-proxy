@@ -24,7 +24,7 @@ from typing import Optional, List
 
 logger = logging.getLogger(__name__)
 
-# ── Paths ────────────────────────────────────────────────────────────
+# ?? Paths ????????????????????????????????????????????????????????????
 WARP_DATA_DIR = Path("/var/lib/cloudflare-warp")
 DATA_DIR = Path("/data")
 LICENSES_DIR = DATA_DIR / "licenses"
@@ -32,7 +32,7 @@ LICENSES_INDEX = LICENSES_DIR / "index.json"
 SETTINGS_FILE = DATA_DIR / "settings.json"
 CURRENT_LICENSE_FILE = DATA_DIR / "current_license_id"
 
-# ── Default configuration ───────────────────────────────────────────
+# ?? Default configuration ???????????????????????????????????????????
 DEFAULT_SETTINGS = {
     "refresh_interval_minutes": 0,   # 0 = disabled
     "auto_rotate": False,
@@ -45,7 +45,7 @@ WARP_SOCKS5_ADDR = "127.0.0.1:40000"
 WARP_OPERATION_LOCK = threading.RLock()
 
 
-# ── Helpers ──────────────────────────────────────────────────────────
+# ?? Helpers ??????????????????????????????????????????????????????????
 
 def _run_cmd(cmd: list, timeout: int = 30, check: bool = False) -> subprocess.CompletedProcess:
     """Run a shell command and return the CompletedProcess."""
@@ -123,6 +123,27 @@ def _save_json(path: Path, data):
     os.replace(tmp_path, path)
 
 
+def _clear_directory_contents(path: Path):
+    """Remove all entries inside a directory without deleting the directory itself."""
+    path.mkdir(parents=True, exist_ok=True)
+    for item in path.iterdir():
+        if item.is_dir() and not item.is_symlink():
+            shutil.rmtree(item)
+        else:
+            item.unlink()
+
+
+def _copy_directory_contents(source_dir: Path, dest_dir: Path):
+    """Copy all entries from source_dir into dest_dir."""
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    for item in source_dir.iterdir():
+        dest = dest_dir / item.name
+        if item.is_dir() and not item.is_symlink():
+            shutil.copytree(item, dest, symlinks=True)
+        else:
+            shutil.copy2(item, dest, follow_symlinks=False)
+
+
 def _stop_warp_svc():
     """Stop the warp-svc daemon."""
     _run_cmd(["pkill", "-f", "warp-svc"], timeout=5)
@@ -150,7 +171,7 @@ def _is_warp_svc_running() -> bool:
         return False
 
 
-# ── License Pool Management ──────────────────────────────────────────
+# ?? License Pool Management ??????????????????????????????????????????
 
 def load_license_index() -> dict:
     """Load the license pool index."""
@@ -226,9 +247,7 @@ def generate_license() -> dict:
         _stop_warp_svc()
 
         # Remove old registration data
-        if WARP_DATA_DIR.exists():
-            shutil.rmtree(WARP_DATA_DIR)
-        WARP_DATA_DIR.mkdir(parents=True, exist_ok=True)
+        _clear_directory_contents(WARP_DATA_DIR)
 
         # 3. Start warp-svc and create new registration
         _start_warp_svc()
@@ -266,12 +285,7 @@ def generate_license() -> dict:
 
         # Copy WARP data
         if WARP_DATA_DIR.exists():
-            for item in WARP_DATA_DIR.iterdir():
-                dest = new_license_dir / item.name
-                if item.is_dir():
-                    shutil.copytree(item, dest)
-                else:
-                    shutil.copy2(item, dest)
+            _copy_directory_contents(WARP_DATA_DIR, new_license_dir)
 
         # Save metadata
         meta = {
@@ -326,15 +340,8 @@ def generate_license() -> dict:
 def _restore_data_dir(source_dir: Path):
     """Restore WARP data directory from a source backup."""
     _stop_warp_svc()
-    if WARP_DATA_DIR.exists():
-        shutil.rmtree(WARP_DATA_DIR)
-    WARP_DATA_DIR.mkdir(parents=True, exist_ok=True)
-    for item in source_dir.iterdir():
-        dest = WARP_DATA_DIR / item.name
-        if item.is_dir():
-            shutil.copytree(item, dest)
-        else:
-            shutil.copy2(item, dest)
+    _clear_directory_contents(WARP_DATA_DIR)
+    _copy_directory_contents(source_dir, WARP_DATA_DIR)
     _start_warp_svc()
     time.sleep(3)
 
@@ -371,15 +378,8 @@ def switch_to_license(license_id: str, restore_mode: bool = False) -> dict:
     _stop_warp_svc()
 
     # 4. Replace data directory
-    if WARP_DATA_DIR.exists():
-        shutil.rmtree(WARP_DATA_DIR)
-    WARP_DATA_DIR.mkdir(parents=True, exist_ok=True)
-    for item in license_dir.iterdir():
-        dest = WARP_DATA_DIR / item.name
-        if item.is_dir():
-            shutil.copytree(item, dest)
-        else:
-            shutil.copy2(item, dest)
+    _clear_directory_contents(WARP_DATA_DIR)
+    _copy_directory_contents(license_dir, WARP_DATA_DIR)
 
     # 5. Start warp-svc
     _start_warp_svc()
@@ -469,7 +469,7 @@ def get_license_detail(license_id: str) -> Optional[dict]:
     return meta
 
 
-# ── WARP Connection Management ──────────────────────────────────────
+# ?? WARP Connection Management ??????????????????????????????????????
 
 def get_status() -> dict:
     """Get comprehensive current status of the WARP proxy."""
@@ -551,7 +551,7 @@ def rotate_license() -> dict:
     return switch_to_license(next_license["id"])
 
 
-# ── Settings ─────────────────────────────────────────────────────────
+# ?? Settings ?????????????????????????????????????????????????????????
 
 def get_settings() -> dict:
     """Get current settings."""
@@ -570,7 +570,7 @@ def update_settings(new_settings: dict) -> dict:
     return current
 
 
-# ── Background Tasks ────────────────────────────────────────────────
+# ?? Background Tasks ????????????????????????????????????????????????
 
 class HealthCheckLoop:
     """Background thread for periodic health checks and auto-recovery."""
